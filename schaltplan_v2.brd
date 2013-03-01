@@ -65,7 +65,7 @@
 <hole x="96" y="10" drill="3.3"/>
 <hole x="4" y="10" drill="3.3"/>
 <text x="98" y="31" size="1.5" layer="16" font="vector" rot="R90">n39_rollladensteuerung_v2 
-(c) netz39</text>
+CC - BY - SA netz39</text>
 <circle x="4" y="10" radius="4" width="0.4064" layer="42"/>
 <circle x="4" y="70" radius="4" width="0.4064" layer="42"/>
 <circle x="96" y="70" radius="4" width="0.4064" layer="42"/>
