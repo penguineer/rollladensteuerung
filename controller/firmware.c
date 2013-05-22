@@ -67,17 +67,20 @@ inline void setOutput(const int output) {
  * CCCCDDDD
  * 
  * command (CCCC)
- * 	GetLight 0x01   Aktuellen Datenwert ausgeben
- *      SetLight 0x02   Neuen Datenwert setzen
+ *      Stop  0x00   Rollladen anhalten
+ * 	Up    0x01   Motor hoch starten 
+ *      Down  0x02   Motor runter starten
+ *      Open  0x03   Rollladen komplett hochfahren
+ *      Close 0x04   Rollladen komplett herunterfahren
  * 
  * data (DDDD)
- * 	1 bit blink-Status
- * 	3 bit Farbe:	0 keine
- * 			1 rot
- * 			2 grün
+ * 	Rollladen als Bit-Maske
  */
-#define CMD_GETLIGHT 0x01
-#define CMD_SETLIGHT 0x02
+#define CMD_STOP  0x0
+#define CMD_UP    0x1
+#define CMD_DOWN  0x2
+#define CMD_OPEN  0x3
+#define CMD_CLOSE 0x4
 
 static void twi_callback(uint8_t buffer_size,
                          volatile uint8_t input_buffer_length, 
@@ -85,29 +88,25 @@ static void twi_callback(uint8_t buffer_size,
                          volatile uint8_t *output_buffer_length, 
                          volatile uint8_t *output_buffer) {
   
- /* if (input_buffer_length) {
+ if (input_buffer_length) {
     const int cmd  = (input_buffer[0] & 0xF0) >> 4;
     const int data = input_buffer[0] & 0x0F;
     
     switch (cmd) {
-      case CMD_GETLIGHT: {
-	const uint8_t state = ((is_blink == 0 ? 0 : 1) << 3) + current_color;
-	output_buffer[0] = state;
-	*output_buffer_length = 1;
+      case CMD_STOP: {
+	setOutput(0);
 	break;
       }
-      case CMD_SETLIGHT: {
-	setColor(data&0x7, data&0x8);
-	*output_buffer_length=0;
+      case CMD_UP: {
+        setOutput(data);
 	break;
       }
     }
     
-  }*/
+  }
  
  //if (input_buffer_length) {
    const int data = input_buffer[0];
-   setOutput(data);
  //}  
 }
 
