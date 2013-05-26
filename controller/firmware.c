@@ -45,19 +45,21 @@ inline void setOutput(const int output) {
      
      // set DS
      setPortB(b<<PB1);     
-     _delay_us(100);
+  //   _delay_us(100);
+  // Delays sind offenbar nicht nötig, der 74HC kommt hinter dem AVR hinterher
      
      // shift clock
      setPortB(1<<PB4);
-     _delay_us(100);
+    // _delay_us(100);
    }
 
      // clear all outputs
      resetPortB((1<<PB1) | (1<<PB3) | (1<<PB4));
-     _delay_us(100);
+    // _delay_us(100);
 
-   // store clock   
-   setPortB(1<<PB3);
+   // store clock
+     // store clock and shift clock are connected in our scenario
+   //setPortB(1<<PB3);
 }
 
 
@@ -107,6 +109,7 @@ static void twi_callback(uint8_t buffer_size,
  
  //if (input_buffer_length) {
    const int data = input_buffer[0];
+   //setOutput(data);
  //}  
 }
 
