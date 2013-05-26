@@ -124,8 +124,9 @@ void init(void) {
    *   PB0: I2C SDA
    *   PB1: DS (Data Set, out)
    *   PB2: I2C SDC
-   *   PB3: STCP (storage register clock input, out)
+   *   PB3: INT (out)    [STCP (storage register clock input, out)]
    *   PB4: SHCP (shift register clock input, out)
+   * TODO PB1 und PB3 tauschen
    */
   DDRB  = 0b1111010;
   // PullUp für Eingänge
