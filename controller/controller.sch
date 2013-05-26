@@ -7840,6 +7840,70 @@ Source: ERNI-D-Sub-Conmnectors-d.pdf / www.erni.com</description>
 </deviceset>
 </devicesets>
 </library>
+<library name="jumper">
+<description>&lt;b&gt;Jumpers&lt;/b&gt;&lt;p&gt;
+&lt;author&gt;Created by librarian@cadsoft.de&lt;/author&gt;</description>
+<packages>
+<package name="JP1">
+<description>&lt;b&gt;JUMPER&lt;/b&gt;</description>
+<wire x1="-1.016" y1="0" x2="-1.27" y2="0.254" width="0.1524" layer="21"/>
+<wire x1="-1.016" y1="0" x2="-1.27" y2="-0.254" width="0.1524" layer="21"/>
+<wire x1="1.016" y1="0" x2="1.27" y2="0.254" width="0.1524" layer="21"/>
+<wire x1="1.016" y1="0" x2="1.27" y2="-0.254" width="0.1524" layer="21"/>
+<wire x1="1.27" y1="-0.254" x2="1.27" y2="-2.286" width="0.1524" layer="21"/>
+<wire x1="1.016" y1="-2.54" x2="1.27" y2="-2.286" width="0.1524" layer="21"/>
+<wire x1="1.27" y1="2.286" x2="1.016" y2="2.54" width="0.1524" layer="21"/>
+<wire x1="1.27" y1="2.286" x2="1.27" y2="0.254" width="0.1524" layer="21"/>
+<wire x1="1.016" y1="2.54" x2="-1.016" y2="2.54" width="0.1524" layer="21"/>
+<wire x1="-1.27" y1="2.286" x2="-1.016" y2="2.54" width="0.1524" layer="21"/>
+<wire x1="-1.27" y1="2.286" x2="-1.27" y2="0.254" width="0.1524" layer="21"/>
+<wire x1="-1.27" y1="-0.254" x2="-1.27" y2="-2.286" width="0.1524" layer="21"/>
+<wire x1="-1.016" y1="-2.54" x2="-1.27" y2="-2.286" width="0.1524" layer="21"/>
+<wire x1="-1.016" y1="-2.54" x2="1.016" y2="-2.54" width="0.1524" layer="21"/>
+<pad name="1" x="0" y="-1.27" drill="0.9144" shape="long"/>
+<pad name="2" x="0" y="1.27" drill="0.9144" shape="long"/>
+<text x="-1.651" y="-2.54" size="1.27" layer="25" ratio="10" rot="R90">&gt;NAME</text>
+<text x="2.921" y="-2.54" size="1.27" layer="27" ratio="10" rot="R90">&gt;VALUE</text>
+<rectangle x1="-0.3048" y1="0.9652" x2="0.3048" y2="1.5748" layer="51"/>
+<rectangle x1="-0.3048" y1="-1.5748" x2="0.3048" y2="-0.9652" layer="51"/>
+</package>
+</packages>
+<symbols>
+<symbol name="J1">
+<wire x1="0" y1="2.54" x2="0" y2="3.81" width="0.4064" layer="94"/>
+<wire x1="0" y1="3.81" x2="0" y2="5.08" width="0.1524" layer="94"/>
+<wire x1="0" y1="-2.54" x2="0" y2="-3.81" width="0.4064" layer="94"/>
+<wire x1="0" y1="-3.81" x2="0" y2="-5.08" width="0.1524" layer="94"/>
+<wire x1="-1.905" y1="5.08" x2="1.905" y2="5.08" width="0.4064" layer="94"/>
+<wire x1="1.905" y1="5.08" x2="1.905" y2="-5.08" width="0.4064" layer="94"/>
+<wire x1="1.905" y1="-5.08" x2="-1.905" y2="-5.08" width="0.4064" layer="94"/>
+<wire x1="-1.905" y1="-5.08" x2="-1.905" y2="5.08" width="0.4064" layer="94"/>
+<text x="-2.54" y="-5.08" size="1.778" layer="95" rot="R90">&gt;NAME</text>
+<text x="4.445" y="-5.08" size="1.778" layer="96" rot="R90">&gt;VALUE</text>
+<pin name="1" x="0" y="-7.62" visible="pad" length="short" direction="pas" rot="R90"/>
+<pin name="2" x="0" y="7.62" visible="pad" length="short" direction="pas" rot="R270"/>
+</symbol>
+</symbols>
+<devicesets>
+<deviceset name="JP1Q" prefix="JP" uservalue="yes">
+<description>&lt;b&gt;JUMPER&lt;/b&gt;</description>
+<gates>
+<gate name="A" symbol="J1" x="0" y="0"/>
+</gates>
+<devices>
+<device name="" package="JP1">
+<connects>
+<connect gate="A" pin="1" pad="1"/>
+<connect gate="A" pin="2" pad="2"/>
+</connects>
+<technologies>
+<technology name=""/>
+</technologies>
+</device>
+</devices>
+</deviceset>
+</devicesets>
+</library>
 </libraries>
 <attributes>
 </attributes>
@@ -7869,23 +7933,26 @@ Source: ERNI-D-Sub-Conmnectors-d.pdf / www.erni.com</description>
 <part name="SUPPLY5" library="supply2" deviceset="VCC" device=""/>
 <part name="LED1" library="led" deviceset="LED" device="5MM" value="ge"/>
 <part name="LED2" library="led" deviceset="LED" device="5MM" value="rt"/>
-<part name="R2" library="resistor" deviceset="R-EU_" device="0309/12"/>
-<part name="R3" library="resistor" deviceset="R-EU_" device="0309/12"/>
+<part name="R2" library="resistor" deviceset="R-EU_" device="0309/12" value="1K"/>
+<part name="R3" library="resistor" deviceset="R-EU_" device="0309/12" value="1K"/>
 <part name="LED3" library="led" deviceset="LED" device="5MM" value="ge"/>
 <part name="LED4" library="led" deviceset="LED" device="5MM" value="rt"/>
-<part name="R4" library="resistor" deviceset="R-EU_" device="0309/12"/>
-<part name="R5" library="resistor" deviceset="R-EU_" device="0309/12"/>
+<part name="R4" library="resistor" deviceset="R-EU_" device="0309/12" value="1K"/>
+<part name="R5" library="resistor" deviceset="R-EU_" device="0309/12" value="1K"/>
 <part name="LED5" library="led" deviceset="LED" device="5MM" value="ge"/>
 <part name="LED6" library="led" deviceset="LED" device="5MM" value="rt"/>
-<part name="R6" library="resistor" deviceset="R-EU_" device="0309/12"/>
-<part name="R7" library="resistor" deviceset="R-EU_" device="0309/12"/>
+<part name="R6" library="resistor" deviceset="R-EU_" device="0309/12" value="1K"/>
+<part name="R7" library="resistor" deviceset="R-EU_" device="0309/12" value="1K"/>
 <part name="LED7" library="led" deviceset="LED" device="5MM" value="ge"/>
 <part name="LED8" library="led" deviceset="LED" device="5MM" value="rt"/>
-<part name="R8" library="resistor" deviceset="R-EU_" device="0309/12"/>
-<part name="R9" library="resistor" deviceset="R-EU_" device="0309/12"/>
+<part name="R8" library="resistor" deviceset="R-EU_" device="0309/12" value="1K"/>
+<part name="R9" library="resistor" deviceset="R-EU_" device="0309/12" value="1K"/>
 <part name="GND6" library="supply1" deviceset="GND" device=""/>
 <part name="X1" library="con-subd" deviceset="M09HPS" device=""/>
 <part name="GND7" library="supply1" deviceset="GND" device=""/>
+<part name="R10" library="resistor" deviceset="R-EU_" device="0207/7" value="10K"/>
+<part name="JP1" library="jumper" deviceset="JP1Q" device=""/>
+<part name="SUPPLY6" library="supply2" deviceset="VCC" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -7937,6 +8004,9 @@ Source: ERNI-D-Sub-Conmnectors-d.pdf / www.erni.com</description>
 <instance part="X1" gate="-G" x="86.36" y="-55.88"/>
 <instance part="X1" gate="-1" x="83.82" y="-33.02"/>
 <instance part="GND7" gate="1" x="81.28" y="-60.96"/>
+<instance part="R10" gate="G$1" x="25.4" y="10.16" rot="R90"/>
+<instance part="JP1" gate="A" x="17.78" y="5.08" rot="R90"/>
+<instance part="SUPPLY6" gate="G$1" x="5.08" y="2.54" rot="R180"/>
 </instances>
 <busses>
 </busses>
@@ -7979,6 +8049,11 @@ Source: ERNI-D-Sub-Conmnectors-d.pdf / www.erni.com</description>
 <wire x1="81.28" y1="-43.18" x2="58.42" y2="-43.18" width="0.1524" layer="91"/>
 <wire x1="58.42" y1="-43.18" x2="58.42" y2="10.16" width="0.1524" layer="91"/>
 <junction x="58.42" y="10.16"/>
+</segment>
+<segment>
+<pinref part="JP1" gate="A" pin="2"/>
+<pinref part="SUPPLY6" gate="G$1" pin="VCC"/>
+<wire x1="10.16" y1="5.08" x2="5.08" y2="5.08" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="GND" class="0">
@@ -8045,11 +8120,6 @@ Source: ERNI-D-Sub-Conmnectors-d.pdf / www.erni.com</description>
 <junction x="38.1" y="-76.2"/>
 </segment>
 <segment>
-<pinref part="GND5" gate="1" pin="GND"/>
-<pinref part="IC2" gate="A" pin="G"/>
-<wire x1="25.4" y1="15.24" x2="25.4" y2="5.08" width="0.1524" layer="91"/>
-</segment>
-<segment>
 <pinref part="X1" gate="-G" pin="G1"/>
 <wire x1="81.28" y1="-58.42" x2="81.28" y2="-55.88" width="0.1524" layer="91"/>
 <pinref part="X1" gate="-G" pin="G2"/>
@@ -8057,6 +8127,10 @@ Source: ERNI-D-Sub-Conmnectors-d.pdf / www.erni.com</description>
 <wire x1="83.82" y1="-58.42" x2="81.28" y2="-58.42" width="0.1524" layer="91"/>
 <pinref part="GND7" gate="1" pin="GND"/>
 <junction x="81.28" y="-58.42"/>
+</segment>
+<segment>
+<pinref part="GND5" gate="1" pin="GND"/>
+<pinref part="R10" gate="G$1" pin="2"/>
 </segment>
 </net>
 <net name="RESET" class="0">
@@ -8319,6 +8393,15 @@ Source: ERNI-D-Sub-Conmnectors-d.pdf / www.erni.com</description>
 <wire x1="48.26" y1="5.08" x2="48.26" y2="33.02" width="0.1524" layer="91"/>
 </segment>
 </net>
+<net name="REG_DISABLE" class="0">
+<segment>
+<pinref part="IC2" gate="A" pin="G"/>
+<pinref part="R10" gate="G$1" pin="1"/>
+<pinref part="JP1" gate="A" pin="1"/>
+<junction x="25.4" y="5.08"/>
+<pinref part="JP1" gate="A" pin="1"/>
+</segment>
+</net>
 </nets>
 </sheet>
 </sheets>
@@ -8326,26 +8409,27 @@ Source: ERNI-D-Sub-Conmnectors-d.pdf / www.erni.com</description>
 <approved hash="115,1,76.1577,26.8647,SV2,,,,,"/>
 <approved hash="115,1,104.098,26.8647,SV3,,,,,"/>
 <approved hash="115,1,84.3221,-35.56,X1,,,,,"/>
+<approved hash="115,1,17.78,3.67877,JP1,,,,,"/>
 <approved hash="117,1,43.18,25.4,MOSI,,,,,"/>
 <approved hash="117,1,43.18,30.48,SCK,,,,,"/>
-<approved hash="117,1,48.26,16.51,MISO,,,,,"/>
-<approved hash="117,1,48.26,-22.86,QA,,,,,"/>
-<approved hash="117,1,78.74,-35.56,QA,,,,,"/>
-<approved hash="117,1,45.72,-27.94,QB,,,,,"/>
-<approved hash="117,1,78.74,-33.02,QB,,,,,"/>
-<approved hash="117,1,43.18,-22.86,QC,,,,,"/>
-<approved hash="117,1,78.74,-40.64,QC,,,,,"/>
-<approved hash="117,1,40.64,-27.94,QD,,,,,"/>
-<approved hash="117,1,78.74,-38.1,QD,,,,,"/>
+<approved hash="117,1,92.71,25.4,MISO,,,,,"/>
+<approved hash="117,1,43.18,-41.91,QA,,,,,"/>
+<approved hash="117,1,48.26,-21.59,QA,,,,,"/>
+<approved hash="117,1,33.02,-41.91,QB,,,,,"/>
+<approved hash="117,1,45.72,-21.59,QB,,,,,"/>
+<approved hash="117,1,40.64,-41.91,QC,,,,,"/>
+<approved hash="117,1,43.18,-21.59,QC,,,,,"/>
+<approved hash="117,1,30.48,-41.91,QD,,,,,"/>
+<approved hash="117,1,40.64,-21.59,QD,,,,,"/>
 <approved hash="117,1,-8.89,35.56,RESET,,,,,"/>
-<approved hash="117,1,38.1,-22.86,QE,,,,,"/>
-<approved hash="117,1,78.74,-48.26,QE,,,,,"/>
-<approved hash="117,1,35.56,-27.94,QF,,,,,"/>
-<approved hash="117,1,78.74,-45.72,QF,,,,,"/>
-<approved hash="117,1,33.02,-22.86,QG,,,,,"/>
-<approved hash="117,1,78.74,-53.34,QG,,,,,"/>
-<approved hash="117,1,30.48,-27.94,QH,,,,,"/>
-<approved hash="117,1,78.74,-50.8,QH,,,,,"/>
+<approved hash="117,1,38.1,-41.91,QE,,,,,"/>
+<approved hash="117,1,38.1,-21.59,QE,,,,,"/>
+<approved hash="117,1,27.94,-41.91,QF,,,,,"/>
+<approved hash="117,1,35.56,-21.59,QF,,,,,"/>
+<approved hash="117,1,35.56,-41.91,QG,,,,,"/>
+<approved hash="117,1,33.02,-21.59,QG,,,,,"/>
+<approved hash="117,1,25.4,-41.91,QH,,,,,"/>
+<approved hash="117,1,30.48,-21.59,QH,,,,,"/>
 </errors>
 </schematic>
 </drawing>
