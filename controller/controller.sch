@@ -7953,6 +7953,9 @@ Source: ERNI-D-Sub-Conmnectors-d.pdf / www.erni.com</description>
 <part name="R10" library="resistor" deviceset="R-EU_" device="0207/7" value="10K"/>
 <part name="JP1" library="jumper" deviceset="JP1Q" device=""/>
 <part name="SUPPLY6" library="supply2" deviceset="VCC" device=""/>
+<part name="SV4" library="con-lstb" deviceset="MA05-1" device=""/>
+<part name="GND8" library="supply1" deviceset="GND" device=""/>
+<part name="SUPPLY7" library="supply2" deviceset="VCC" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -8007,6 +8010,9 @@ Source: ERNI-D-Sub-Conmnectors-d.pdf / www.erni.com</description>
 <instance part="R10" gate="G$1" x="25.4" y="10.16" rot="R90"/>
 <instance part="JP1" gate="A" x="17.78" y="5.08" rot="R90"/>
 <instance part="SUPPLY6" gate="G$1" x="5.08" y="2.54" rot="R180"/>
+<instance part="SV4" gate="G$1" x="132.08" y="25.4"/>
+<instance part="GND8" gate="1" x="144.78" y="38.1" rot="R180"/>
+<instance part="SUPPLY7" gate="G$1" x="147.32" y="27.94" rot="R270"/>
 </instances>
 <busses>
 </busses>
@@ -8054,6 +8060,11 @@ Source: ERNI-D-Sub-Conmnectors-d.pdf / www.erni.com</description>
 <pinref part="JP1" gate="A" pin="2"/>
 <pinref part="SUPPLY6" gate="G$1" pin="VCC"/>
 <wire x1="10.16" y1="5.08" x2="5.08" y2="5.08" width="0.1524" layer="91"/>
+</segment>
+<segment>
+<pinref part="SUPPLY7" gate="G$1" pin="VCC"/>
+<pinref part="SV4" gate="G$1" pin="4"/>
+<wire x1="144.78" y1="27.94" x2="139.7" y2="27.94" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="GND" class="0">
@@ -8132,6 +8143,12 @@ Source: ERNI-D-Sub-Conmnectors-d.pdf / www.erni.com</description>
 <pinref part="GND5" gate="1" pin="GND"/>
 <pinref part="R10" gate="G$1" pin="2"/>
 </segment>
+<segment>
+<pinref part="GND8" gate="1" pin="GND"/>
+<wire x1="144.78" y1="35.56" x2="144.78" y2="30.48" width="0.1524" layer="91"/>
+<pinref part="SV4" gate="G$1" pin="5"/>
+<wire x1="144.78" y1="30.48" x2="139.7" y2="30.48" width="0.1524" layer="91"/>
+</segment>
 </net>
 <net name="RESET" class="0">
 <segment>
@@ -8152,6 +8169,8 @@ Source: ERNI-D-Sub-Conmnectors-d.pdf / www.erni.com</description>
 <label x="66.04" y="60.96" size="1.778" layer="95"/>
 </segment>
 <segment>
+<pinref part="SV4" gate="G$1" pin="3"/>
+<wire x1="106.68" y1="25.4" x2="139.7" y2="25.4" width="0.1524" layer="91"/>
 <pinref part="SV2" gate="G$1" pin="3"/>
 <pinref part="SV3" gate="G$1" pin="3"/>
 <wire x1="78.74" y1="25.4" x2="106.68" y2="25.4" width="0.1524" layer="91"/>
@@ -8160,6 +8179,7 @@ Source: ERNI-D-Sub-Conmnectors-d.pdf / www.erni.com</description>
 <wire x1="66.04" y1="27.94" x2="68.58" y2="25.4" width="0.1524" layer="91"/>
 <wire x1="68.58" y1="25.4" x2="78.74" y2="25.4" width="0.1524" layer="91"/>
 <junction x="78.74" y="25.4"/>
+<junction x="106.68" y="25.4"/>
 </segment>
 </net>
 <net name="SCK" class="0">
@@ -8169,6 +8189,8 @@ Source: ERNI-D-Sub-Conmnectors-d.pdf / www.erni.com</description>
 <label x="66.04" y="58.42" size="1.778" layer="95"/>
 </segment>
 <segment>
+<pinref part="SV4" gate="G$1" pin="2"/>
+<wire x1="106.68" y1="22.86" x2="139.7" y2="22.86" width="0.1524" layer="91"/>
 <pinref part="IC1" gate="G$1" pin="(SCK)PB2"/>
 <wire x1="27.94" y1="30.48" x2="58.42" y2="30.48" width="0.1524" layer="91"/>
 <wire x1="58.42" y1="30.48" x2="66.04" y2="22.86" width="0.1524" layer="91"/>
@@ -8177,6 +8199,7 @@ Source: ERNI-D-Sub-Conmnectors-d.pdf / www.erni.com</description>
 <pinref part="SV3" gate="G$1" pin="2"/>
 <wire x1="78.74" y1="22.86" x2="106.68" y2="22.86" width="0.1524" layer="91"/>
 <junction x="78.74" y="22.86"/>
+<junction x="106.68" y="22.86"/>
 </segment>
 </net>
 <net name="MOSI" class="0">
@@ -8186,6 +8209,8 @@ Source: ERNI-D-Sub-Conmnectors-d.pdf / www.erni.com</description>
 <label x="101.6" y="58.42" size="1.778" layer="95"/>
 </segment>
 <segment>
+<pinref part="SV4" gate="G$1" pin="1"/>
+<wire x1="106.68" y1="20.32" x2="139.7" y2="20.32" width="0.1524" layer="91"/>
 <pinref part="IC1" gate="G$1" pin="(MOSI)PB0"/>
 <wire x1="27.94" y1="25.4" x2="58.42" y2="25.4" width="0.1524" layer="91"/>
 <wire x1="58.42" y1="25.4" x2="63.5" y2="20.32" width="0.1524" layer="91"/>
@@ -8194,6 +8219,7 @@ Source: ERNI-D-Sub-Conmnectors-d.pdf / www.erni.com</description>
 <pinref part="SV3" gate="G$1" pin="1"/>
 <wire x1="78.74" y1="20.32" x2="106.68" y2="20.32" width="0.1524" layer="91"/>
 <junction x="78.74" y="20.32"/>
+<junction x="106.68" y="20.32"/>
 </segment>
 </net>
 <net name="N$3" class="0">
@@ -8410,9 +8436,10 @@ Source: ERNI-D-Sub-Conmnectors-d.pdf / www.erni.com</description>
 <approved hash="115,1,104.098,26.8647,SV3,,,,,"/>
 <approved hash="115,1,84.3221,-35.56,X1,,,,,"/>
 <approved hash="115,1,17.78,3.67877,JP1,,,,,"/>
-<approved hash="117,1,43.18,25.4,MOSI,,,,,"/>
-<approved hash="117,1,43.18,30.48,SCK,,,,,"/>
-<approved hash="117,1,92.71,25.4,MISO,,,,,"/>
+<approved hash="115,1,137.118,26.8647,SV4,,,,,"/>
+<approved hash="117,1,123.19,20.32,MOSI,,,,,"/>
+<approved hash="117,1,123.19,22.86,SCK,,,,,"/>
+<approved hash="117,1,123.19,25.4,MISO,,,,,"/>
 <approved hash="117,1,43.18,-41.91,QA,,,,,"/>
 <approved hash="117,1,48.26,-21.59,QA,,,,,"/>
 <approved hash="117,1,33.02,-41.91,QB,,,,,"/>
