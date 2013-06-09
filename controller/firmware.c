@@ -41,10 +41,10 @@ inline void setOutput(const int output) {
      data = data >> 1;
      
      // clear all outputs
-     resetPortB((1<<PB1) | (1<<PB3) | (1<<PB4));
+     resetPortB((1<<PB3) | (1<<PB4));
      
      // set DS
-     setPortB(b<<PB1);     
+     setPortB(b<<PB3);     
   //   _delay_us(100);
   // Delays sind offenbar nicht nötig, der 74HC kommt hinter dem AVR hinterher
      
@@ -54,7 +54,7 @@ inline void setOutput(const int output) {
    }
 
      // clear all outputs
-     resetPortB((1<<PB1) | (1<<PB3) | (1<<PB4));
+     resetPortB((1<<PB3) | (1<<PB4));
     // _delay_us(100);
 
    // store clock
@@ -109,7 +109,7 @@ static void twi_callback(uint8_t buffer_size,
  
  //if (input_buffer_length) {
    const int data = input_buffer[0];
-   //setOutput(data);
+   setOutput(data);
  //}  
 }
 
@@ -122,11 +122,10 @@ void init(void) {
   /*
    * Pin-Config PortB:
    *   PB0: I2C SDA
-   *   PB1: DS (Data Set, out)
+   *   PB1: INT (out)    [STCP (storage register clock input, out)]
    *   PB2: I2C SDC
-   *   PB3: INT (out)    [STCP (storage register clock input, out)]
+   *   PB3: DS (Data Set, out)
    *   PB4: SHCP (shift register clock input, out)
-   * TODO PB1 und PB3 tauschen
    */
   DDRB  = 0b1111010;
   // PullUp für Eingänge
