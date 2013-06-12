@@ -32,7 +32,7 @@ inline void resetPortB(char mask) {
   PORTB &= ~mask; 
 }
 
-inline void setOutput(const int output) {
+void set_output(const int output) {
    int data = output;
    
    int i;
@@ -62,6 +62,33 @@ inline void setOutput(const int output) {
    //setPortB(1<<PB3);
 }
 
+#define SWITCH_OFF 0
+#define SWITCH_UP 1
+#define SWITCH_DOWN 2
+
+void change_switch (int* output, int idx, int state) {
+  const int ADDRS[8] = {0x01,0x04, 0x02,0x08, 0x10,0x40, 0x20,0x80};
+
+  // reset
+  (*output) &= ~ADDRS[idx*2];
+  (*output) &= ~ADDRS[idx*2+1];
+
+  // set if needed
+  switch (state) {
+    case SWITCH_OFF: {
+      break;
+    }
+    case SWITCH_UP: {
+      (*output) |= ADDRS[idx*2+1];
+      // no break – DOWN switch applies, too.
+    }
+    case SWITCH_DOWN: {
+      (*output) |= ADDRS[idx*2];
+    }
+  }
+}
+
+int output = 0;
 
 /*
  * I²C Datenformat:
@@ -78,11 +105,12 @@ inline void setOutput(const int output) {
  * data (DDDD)
  * 	Rollladen als Bit-Maske
  */
-#define CMD_STOP  0x0
-#define CMD_UP    0x1
-#define CMD_DOWN  0x2
-#define CMD_OPEN  0x3
-#define CMD_CLOSE 0x4
+#define CMD_ALL_STOP  0x0
+#define CMD_STOP      0x1
+#define CMD_UP        0x2
+#define CMD_DOWN      0x3
+#define CMD_OPEN      0x4
+#define CMD_CLOSE     0x5
 
 static void twi_callback(uint8_t buffer_size,
                          volatile uint8_t input_buffer_length, 
@@ -91,26 +119,33 @@ static void twi_callback(uint8_t buffer_size,
                          volatile uint8_t *output_buffer) {
   
  if (input_buffer_length) {
+   //set_output(input_buffer[0]);
+
     const int cmd  = (input_buffer[0] & 0xF0) >> 4;
     const int data = input_buffer[0] & 0x0F;
     
     switch (cmd) {
+      case CMD_ALL_STOP: {
+	output = 0;
+	break;
+      }
       case CMD_STOP: {
-	setOutput(0);
+	change_switch(&output, data, SWITCH_OFF);
 	break;
       }
       case CMD_UP: {
-        setOutput(data);
+        change_switch(&output, data, SWITCH_UP);
+	break;
+      }
+      case CMD_DOWN: {
+        change_switch(&output, data, SWITCH_DOWN);
 	break;
       }
     }
     
   }
  
- //if (input_buffer_length) {
-   const int data = input_buffer[0];
-   setOutput(data);
- //}  
+   set_output(output);
 }
 
 
@@ -160,6 +195,8 @@ int main(void)
 
   // start TWI (I²C) slave mode
   usi_twi_slave(0x21, 0, &twi_callback, &twi_idle_callback);
+  
+  set_output(0);
 
   return 0;
 }
