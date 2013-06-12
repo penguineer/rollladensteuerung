@@ -24,6 +24,10 @@
 #include "usitwislave.h"
 
 
+// Shift register output state
+static int output = 0;
+
+
 inline void setPortB(char mask) {
   PORTB |= mask;
 }
@@ -66,12 +70,12 @@ void set_output(const int output) {
 #define SWITCH_UP 1
 #define SWITCH_DOWN 2
 
-void change_switch (int* output, int idx, int state) {
+void change_switch (int* o, int idx, int state) {
   const int ADDRS[8] = {0x01,0x04, 0x02,0x08, 0x10,0x40, 0x20,0x80};
 
   // reset
-  (*output) &= ~ADDRS[idx*2];
-  (*output) &= ~ADDRS[idx*2+1];
+  *o &= ~ADDRS[idx*2];
+  *o &= ~ADDRS[idx*2+1];
 
   // set if needed
   switch (state) {
@@ -79,16 +83,17 @@ void change_switch (int* output, int idx, int state) {
       break;
     }
     case SWITCH_UP: {
-      (*output) |= ADDRS[idx*2+1];
+      *o |= ADDRS[idx*2+1];
       // no break – DOWN switch applies, too.
     }
     case SWITCH_DOWN: {
-      (*output) |= ADDRS[idx*2];
+      *o |= ADDRS[idx*2];
+      break;
     }
+    default: break; // should not happen
   }
 }
 
-int output = 0;
 
 /*
  * I²C Datenformat:
@@ -119,14 +124,12 @@ static void twi_callback(uint8_t buffer_size,
                          volatile uint8_t *output_buffer) {
   
  if (input_buffer_length) {
-   //set_output(input_buffer[0]);
-
     const int cmd  = (input_buffer[0] & 0xF0) >> 4;
     const int data = input_buffer[0] & 0x0F;
     
     switch (cmd) {
       case CMD_ALL_STOP: {
-	output = 0;
+	//output = 0;
 	break;
       }
       case CMD_STOP: {
