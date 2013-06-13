@@ -25,7 +25,7 @@
 
 
 // Shift register output state
-static int output = 0;
+static volatile int G_output = 0;
 
 
 inline void setPortB(char mask) {
@@ -40,21 +40,22 @@ void set_output(const int output) {
    int data = output;
    
    int i;
-   for (i = 0; i < 8; i++) {
+   for (i = 0; i < 9; i++) {
      const int b = data & 0x01;
      data = data >> 1;
      
      // clear all outputs
      resetPortB((1<<PB3) | (1<<PB4));
+     _delay_us(1);
      
      // set DS
      setPortB(b<<PB3);     
-  //   _delay_us(100);
+     _delay_us(1);
   // Delays sind offenbar nicht nötig, der 74HC kommt hinter dem AVR hinterher
      
      // shift clock
      setPortB(1<<PB4);
-    // _delay_us(100);
+     _delay_us(1);
    }
 
      // clear all outputs
@@ -70,12 +71,15 @@ void set_output(const int output) {
 #define SWITCH_UP 1
 #define SWITCH_DOWN 2
 
-void change_switch (int* o, int idx, int state) {
-  const int ADDRS[8] = {0x01,0x04, 0x02,0x08, 0x10,0x40, 0x20,0x80};
+const char ADDRS[8] = {0x01,0x04, 0x02,0x08, 0x10,0x40, 0x20,0x80};
 
+void change_switch (volatile int* o, int idx, int state) {
+  int d = *o;
+  
   // reset
-  *o &= ~ADDRS[idx*2];
-  *o &= ~ADDRS[idx*2+1];
+  d &= ~ADDRS[idx*2];
+  d &= ~ADDRS[idx*2+1];
+
 
   // set if needed
   switch (state) {
@@ -83,15 +87,17 @@ void change_switch (int* o, int idx, int state) {
       break;
     }
     case SWITCH_UP: {
-      *o |= ADDRS[idx*2+1];
+      d |= ADDRS[idx*2+1];
       // no break – DOWN switch applies, too.
     }
     case SWITCH_DOWN: {
-      *o |= ADDRS[idx*2];
+      d |= ADDRS[idx*2];
       break;
     }
     default: break; // should not happen
   }
+
+  *o = d;
 }
 
 
@@ -122,33 +128,36 @@ static void twi_callback(uint8_t buffer_size,
                          volatile const uint8_t *input_buffer,
                          volatile uint8_t *output_buffer_length, 
                          volatile uint8_t *output_buffer) {
-  
- if (input_buffer_length) {
+
+  if (input_buffer_length) {
     const int cmd  = (input_buffer[0] & 0xF0) >> 4;
     const int data = input_buffer[0] & 0x0F;
     
     switch (cmd) {
       case CMD_ALL_STOP: {
-	//output = 0;
+	G_output = 0;
 	break;
       }
       case CMD_STOP: {
-	change_switch(&output, data, SWITCH_OFF);
+	change_switch(&G_output, data, SWITCH_OFF);
 	break;
       }
       case CMD_UP: {
-        change_switch(&output, data, SWITCH_UP);
+        change_switch(&G_output, data, SWITCH_UP);
 	break;
       }
       case CMD_DOWN: {
-        change_switch(&output, data, SWITCH_DOWN);
+        change_switch(&G_output, data, SWITCH_DOWN);
 	break;
       }
     }
     
   }
- 
-   set_output(output);
+   set_output(G_output);
+   _delay_ms(1000);
+
+    *output_buffer_length=0;
+    return;
 }
 
 
@@ -174,17 +183,17 @@ void init(void) {
    
    
    /*  set clock   */
-  CLKPR = (1 << CLKPCE);  /*  enable clock prescaler update       */
-  CLKPR = 0;              /*  set clock to maximum                */
+//  CLKPR = (1 << CLKPCE);  /*  enable clock prescaler update       */
+//  CLKPR = 0;              /*  set clock to maximum                */
 
   /*  timer init  */
-  TIFR &= ~(1 << TOV0);   /*  clear timer0 overflow interrupt flag    */
-  TIMSK |= (1 << TOIE0);  /*  enable timer0 overflow interrupt        */
+//  TIFR &= ~(1 << TOV0);   /*  clear timer0 overflow interrupt flag    */
+//  TIMSK |= (1 << TOIE0);  /*  enable timer0 overflow interrupt        */
 
   /*  start timer0 by setting last 3 bits in timer0 control register B
    *  to any clock source */
   //TCCR0B = (1 << CS02) | (1 << CS00);
-  TCCR0B = (1 << CS00);
+//  TCCR0B = (1 << CS00);
 
     
   // Global Interrupts aktivieren
@@ -196,10 +205,12 @@ int main(void)
   // initialisieren
   init();
 
+  set_output(0xff);
+  _delay_ms(250);
+  set_output(0);
+
   // start TWI (I²C) slave mode
   usi_twi_slave(0x21, 0, &twi_callback, &twi_idle_callback);
-  
-  set_output(0);
 
   return 0;
 }
