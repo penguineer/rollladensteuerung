@@ -25,7 +25,7 @@
 
 
 // Shift register output state
-static volatile int G_output = 0;
+static volatile char G_output = 0;
 
 
 inline void setPortB(char mask) {
@@ -36,12 +36,12 @@ inline void resetPortB(char mask) {
   PORTB &= ~mask; 
 }
 
-void set_output(const int output) {
-   int data = output;
+void set_output(const char output) {
+   char data = output;
    
-   int i;
+   char i;
    for (i = 0; i < 9; i++) {
-     const int b = data & 0x01;
+     const char b = data & 0x01;
      data = data >> 1;
      
      // clear all outputs
@@ -51,20 +51,14 @@ void set_output(const int output) {
      // set DS
      setPortB(b<<PB3);     
      _delay_us(1);
-  // Delays sind offenbar nicht nötig, der 74HC kommt hinter dem AVR hinterher
      
      // shift clock
      setPortB(1<<PB4);
      _delay_us(1);
    }
 
-     // clear all outputs
-     resetPortB((1<<PB3) | (1<<PB4));
-    // _delay_us(100);
-
-   // store clock
-     // store clock and shift clock are connected in our scenario
-   //setPortB(1<<PB3);
+   // clear all outputs
+   resetPortB((1<<PB3) | (1<<PB4));
 }
 
 #define SWITCH_OFF 0
@@ -73,8 +67,8 @@ void set_output(const int output) {
 
 const char ADDRS[8] = {0x01,0x04, 0x02,0x08, 0x10,0x40, 0x20,0x80};
 
-void change_switch (volatile int* o, int idx, int state) {
-  int d = *o;
+void change_switch (volatile char* o, char idx, char state) {
+  char d = *o;
   
   // reset
   d &= ~ADDRS[idx*2];
@@ -86,11 +80,11 @@ void change_switch (volatile int* o, int idx, int state) {
     case SWITCH_OFF: {
       break;
     }
-    case SWITCH_UP: {
+    case SWITCH_DOWN: {
       d |= ADDRS[idx*2+1];
       // no break – DOWN switch applies, too.
     }
-    case SWITCH_DOWN: {
+    case SWITCH_UP: {
       d |= ADDRS[idx*2];
       break;
     }
@@ -107,11 +101,12 @@ void change_switch (volatile int* o, int idx, int state) {
  * CCCCDDDD
  * 
  * command (CCCC)
- *      Stop  0x00   Rollladen anhalten
- * 	Up    0x01   Motor hoch starten 
- *      Down  0x02   Motor runter starten
- *      Open  0x03   Rollladen komplett hochfahren
- *      Close 0x04   Rollladen komplett herunterfahren
+ *  All Stop  0x00   Alles anhalten
+ *      Stop  0x01   Rollladen anhalten
+ * 	Up    0x02   Motor hoch starten 
+ *      Down  0x03   Motor runter starten
+ *      Open  0x04   Rollladen komplett hochfahren
+ *      Close 0x05   Rollladen komplett herunterfahren
  * 
  * data (DDDD)
  * 	Rollladen als Bit-Maske
@@ -130,8 +125,8 @@ static void twi_callback(uint8_t buffer_size,
                          volatile uint8_t *output_buffer) {
 
   if (input_buffer_length) {
-    const int cmd  = (input_buffer[0] & 0xF0) >> 4;
-    const int data = input_buffer[0] & 0x0F;
+    const char cmd  = (input_buffer[0] & 0xF0) >> 4;
+    const char data = input_buffer[0] & 0x0F;
     
     switch (cmd) {
       case CMD_ALL_STOP: {
@@ -151,13 +146,8 @@ static void twi_callback(uint8_t buffer_size,
 	break;
       }
     }
-    
+    set_output(G_output);   
   }
-   set_output(G_output);
-   _delay_ms(1000);
-
-    *output_buffer_length=0;
-    return;
 }
 
 
@@ -183,17 +173,17 @@ void init(void) {
    
    
    /*  set clock   */
-//  CLKPR = (1 << CLKPCE);  /*  enable clock prescaler update       */
-//  CLKPR = 0;              /*  set clock to maximum                */
+  CLKPR = (1 << CLKPCE);  /*  enable clock prescaler update       */
+  CLKPR = 0;              /*  set clock to maximum                */
 
   /*  timer init  */
-//  TIFR &= ~(1 << TOV0);   /*  clear timer0 overflow interrupt flag    */
-//  TIMSK |= (1 << TOIE0);  /*  enable timer0 overflow interrupt        */
+  TIFR &= ~(1 << TOV0);   /*  clear timer0 overflow interrupt flag    */
+  TIMSK |= (1 << TOIE0);  /*  enable timer0 overflow interrupt        */
 
   /*  start timer0 by setting last 3 bits in timer0 control register B
    *  to any clock source */
   //TCCR0B = (1 << CS02) | (1 << CS00);
-//  TCCR0B = (1 << CS00);
+  TCCR0B = (1 << CS00);
 
     
   // Global Interrupts aktivieren
@@ -205,7 +195,7 @@ int main(void)
   // initialisieren
   init();
 
-  set_output(0xff);
+  set_output(0x04 + 0x08 + 0x40 + 0x80);
   _delay_ms(250);
   set_output(0);
 
