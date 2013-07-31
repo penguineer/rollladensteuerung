@@ -50,6 +50,14 @@ inline int getManualSwitch() {
 }
 
 
+static volatile int isManual = 0;
+
+inline void adjustManLight() {
+  if (isManual)
+      setManLight();
+    else
+      resetManLight();
+}
 
 /*
  * I²C Datenformat:
@@ -79,12 +87,15 @@ static void twi_callback(uint8_t buffer_size,
   }
 }
 
-static volatile int sw = 0;
 
+uint8_t get_key_press();
 
 static void twi_idle_callback(void) {
   // void
-      sw = getManualSwitch();
+  //isManual = get_key_press();
+  if (get_key_press())
+    isManual = !isManual;
+  adjustManLight();
 
 }
 
@@ -156,15 +167,39 @@ int main(void)
   return 0;
 }
 
-void adjustManLight() {
-  if (sw)
-      setManLight();
-    else
-      resetManLight();
-}
 
+// nach http://www.mikrocontroller.net/articles/Entprellung#Softwareentprellung
+
+uint8_t key_state;
+uint8_t key_counter;
+volatile uint8_t key_press;
 
 ISR (TIM0_OVF_vect)
 {
-  adjustManLight();
+  // adjust manual key chatter
+  uint8_t input = PINB & (1<<PB1);
+ 
+  if( input != key_state ) {
+    key_counter--;
+    if( key_counter == 0xFF ) {
+      key_counter = 3;
+      key_state = input;
+      if( input )
+        key_press = 1;
+    }
+  }
+  else
+    key_counter = 3;
+}
+
+uint8_t get_key_press()
+{
+  uint8_t result;
+ 
+  cli();
+  result = key_press;
+  key_press = 0;
+  sei();
+ 
+  return result;
 }
