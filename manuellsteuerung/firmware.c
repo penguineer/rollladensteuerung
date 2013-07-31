@@ -36,6 +36,23 @@ inline void resetPortB(char mask) {
   PORTB &= ~mask; 
 }
 
+static volatile int isManual = 0;
+
+/// Manual Switch Functions
+
+inline int getManualSwitch() {
+  return (PINB & (1<<PB1)) == (1<<PB1);
+}
+
+
+/// Manual Light Functions
+
+/*
+ * 0 off
+ * 1 blink
+ * 2 on
+ */
+static volatile int lightState = 1;
 
 inline void setManLight() {
   setPortB(1<<PB0);
@@ -45,15 +62,16 @@ inline void resetManLight() {
    resetPortB(1<<PB0);
 }
 
-inline int getManualSwitch() {
-  return (PINB & (1<<PB1)) == (1<<PB1);
+inline void toggleManLight() {
+  if (PINB & (1<<PB0))
+    resetManLight();
+  else
+    setManLight();
 }
 
 
-static volatile int isManual = 0;
-
 inline void adjustManLight() {
-  if (isManual)
+  if (lightState)
       setManLight();
     else
       resetManLight();
@@ -93,9 +111,15 @@ uint8_t get_key_press();
 static void twi_idle_callback(void) {
   // void
   //isManual = get_key_press();
-  if (get_key_press())
+  if (get_key_press()) {
+    if (isManual)
+      lightState = 1;
+    else
+      lightState = 2;
+      
     isManual = !isManual;
-  adjustManLight();
+  }
+  //adjustManLight();
 
 }
 
@@ -168,28 +192,57 @@ int main(void)
 }
 
 
-// nach http://www.mikrocontroller.net/articles/Entprellung#Softwareentprellung
+/// Timer: Manual Light
 
+volatile int man_blink = 0;
+
+void checkManualLight() {
+  // off
+  if (lightState == 0) {
+    resetManLight();
+    return;
+  }
+    
+  // on
+  if (lightState == 2) { 
+    setManLight();
+    return;
+  }
+  
+  // blink
+  if (lightState == 1) {
+    if (man_blink)
+      man_blink--;
+    
+    if (!man_blink) {
+      toggleManLight();
+      man_blink = 1000*1000;
+    }
+  }
+}
+
+/// Timer: Manual Key
+
+// nach http://www.mikrocontroller.net/articles/Entprellung#Softwareentprellung
 uint8_t key_state;
 uint8_t key_counter;
-volatile uint8_t key_press;
+volatile uint8_t key_press = 0;
 
-ISR (TIM0_OVF_vect)
-{
+void dechatterKey() {
   // adjust manual key chatter
   uint8_t input = PINB & (1<<PB1);
  
   if( input != key_state ) {
     key_counter--;
     if( key_counter == 0xFF ) {
-      key_counter = 3;
+      key_counter = 5;
       key_state = input;
       if( input )
         key_press = 1;
     }
   }
   else
-    key_counter = 3;
+    key_counter = 5;
 }
 
 uint8_t get_key_press()
@@ -203,3 +256,10 @@ uint8_t get_key_press()
  
   return result;
 }
+
+ISR (TIM0_OVF_vect)
+{
+  dechatterKey();
+  checkManualLight();
+}
+
