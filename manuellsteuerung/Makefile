@@ -1,4 +1,5 @@
-PROGRAMMER = avrisp2
+#PROGRAMMER = avrisp2
+PROGRAMMER = usbasp
 #PROGRAMMER = usbtiny
 CPU_GCC = attiny24
 CPU_DUDE = t24

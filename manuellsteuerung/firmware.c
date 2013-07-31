@@ -37,6 +37,18 @@ inline void resetPortB(char mask) {
 }
 
 
+inline void setManLight() {
+  setPortB(1<<PB0);
+}
+
+inline void resetManLight() {
+   resetPortB(1<<PB0);
+}
+
+inline int getManualSwitch() {
+  return (PINB & (1<<PB1)) == (1<<PB1);
+}
+
 
 
 /*
@@ -67,9 +79,13 @@ static void twi_callback(uint8_t buffer_size,
   }
 }
 
+static volatile int sw = 0;
+
 
 static void twi_idle_callback(void) {
   // void
+      sw = getManualSwitch();
+
 }
 
 void init(void) {
@@ -82,49 +98,57 @@ void init(void) {
    *   PA4: I2C SDC
    *   PA5: INT (out)
    *   PA6: I2C SDA
-   *   PA7: 
+   *   PA7: Beeper
    */
   DDRA  = 0b0101111;
   // PullUp für Eingänge
   PORTA = 0b11111111;
   /*
    * Pin-Config PortB:
-   *   PB0: 
-   *   PB1: 
+   *   PB0: Anzeige Manual Mode (out)
+   *   PB1: Schalter Manuel Mode (in)
    *   PB2: 
    *   PB3: 
    */
-  DDRB  = 0b1111111;
+  DDRB  = 0b1111101;
   // PullUp für Eingänge
-  PORTB = 0b11111111;
+  PORTB = 0b11111101;
 
    /*  disable interrupts  */
    cli();
    
    
    /*  set clock   */
-//  CLKPR = (1 << CLKPCE);  /*  enable clock prescaler update       */
-//  CLKPR = 0;              /*  set clock to maximum                */
+  //CLKPR = (1 << CLKPCE);  /*  enable clock prescaler update       */
+  //CLKPR = 0;              /*  set clock to maximum                */
 
   /*  timer init  */
-//  TIFR &= ~(1 << TOV0);   /*  clear timer0 overflow interrupt flag    */
-//  TIMSK |= (1 << TOIE0);  /*  enable timer0 overflow interrupt        */
+  //TIFR1 &= ~(1 << TOV1);   /*  clear timer0 overflow interrupt flag    */
+  //TIMSK1 |= (1 << TOIE1);  /*  enable timer0 overflow interrupt        */
 
   /*  start timer0 by setting last 3 bits in timer0 control register B
    *  to any clock source */
-  //TCCR0B = (1 << CS02) | (1 << CS00);
-//  TCCR0B = (1 << CS00);
+  //TCCR1B = (1 << CS02) | (1 << CS00);
+  //TCCR1B = (1 << CS00);
 
-    
+  // Do not connect the timer overflow with the I/O port
+  TCCR0A = 0;
+  // Set prescaler and start the timer
+  TCCR0B = (1 << CS00); // | (1 << CS02);
+  // Enable timer overflow interrupt
+  TIMSK0 |= (1 << TOIE0);
+  TIFR0 |= (1 << TOV0);
+
   // Global Interrupts aktivieren
   sei();  
 }
+
 
 int main(void)
 {
   // initialisieren
   init();
-
+  resetManLight();
 
   // start TWI (I²C) slave mode
   usi_twi_slave(0x22, 0, &twi_callback, &twi_idle_callback);
@@ -132,7 +156,15 @@ int main(void)
   return 0;
 }
 
+void adjustManLight() {
+  if (sw)
+      setManLight();
+    else
+      resetManLight();
+}
 
-//ISR (TIMER0_OVF_vect)
-//{
-//}
+
+ISR (TIM0_OVF_vect)
+{
+  adjustManLight();
+}
