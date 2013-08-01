@@ -12,7 +12,7 @@
 
 /* define CPU frequency in MHz here if not defined in Makefile */
 #ifndef F_CPU
-#define F_CPU 8000000UL
+  #define F_CPU 8000000UL
 #endif
 
 #include <avr/io.h>
@@ -70,6 +70,8 @@ inline void toggleBeeper() {
   else
     setBeeper();
 }
+
+
 /// Manual Light Functions
 
 /*
@@ -102,6 +104,53 @@ inline void adjustManLight() {
       resetManLight();
 }
 
+
+/// Direction Switch Functions
+#define PIN_Q7 PA0
+#define PIN_PL PA1
+#define PIN_CP PA2
+
+inline void srTriggerParallelLoad() {
+  // PL is active low
+  resetPortA(1<<PIN_PL);
+  _delay_us(1);
+  setPortA(1<<PIN_PL);
+}
+
+inline void srTriggerClock() {
+  // PL is active low
+  setPortA(1<<PIN_CP);
+  _delay_ms(1);
+  resetPortA(1<<PIN_CP);
+  _delay_ms(1);
+}
+
+// Wert des Schieberegisters auslesen
+uint8_t getShiftValue() {
+  uint8_t data = 0;
+
+  // set clock to a defined state
+  resetPortA(1<<PIN_CP);
+  
+  // pull parallel register
+  srTriggerParallelLoad();
+
+  uint8_t i;
+  for (i = 0; i < 8; i++) {
+    srTriggerClock();
+
+    // get the bit
+    const uint8_t b = (PINA & (1 << PIN_Q7)) ? 0 : 1;
+
+    // store bit in data
+    data = data << 1;
+    data += b;
+  }
+  
+  return data;
+}
+
+
 /*
  * I²C Datenformat:
  * 
@@ -133,7 +182,14 @@ static void twi_callback(uint8_t buffer_size,
 
 uint8_t get_key_press();
 
+uint16_t snd_delay = 10000;
+
 static void twi_idle_callback(void) {
+  // store state and disable interrupts
+  const uint8_t _sreg = SREG;
+  cli();
+
+  
   // void
   //isManual = get_key_press();
   if (get_key_press()) {
@@ -143,28 +199,33 @@ static void twi_idle_callback(void) {
     } else {
       lightState = 2;
       beep = 1;
+    //  snd_delay = getShiftValue();
     }
-    isManual = !isManual;
+    const uint8_t sr = getShiftValue();
+    isManual = (sr & 0x01) ? 0 : 1;
+    //isManual = !isManual;
   }
   //adjustManLight();
 
+  // restore state
+  SREG = _sreg;
 }
 
 void init(void) {
   /*
    * Pin-Config PortA:
-   *   PA0: SR: serial data output (output)
+   *   PA0: SR: serial data (input)
    *   PA1: SR: parallel load low-active (output)
-   *   PA2: SR: clock input low-high (output)
+   *   PA2: SR: clock (output)
    *   PA3: 
    *   PA4: I2C SDC
    *   PA5: INT (out)
    *   PA6: I2C SDA
    *   PA7: Beeper (out)
    */
-  DDRA  = 0b11011111;
+  DDRA  = 0b11011110;
   // PullUp für Eingänge
-  PORTA = 0b11111111;
+  PORTA = 0b11111110;
   /*
    * Pin-Config PortB:
    *   PB0: Anzeige Manual Mode (out)
@@ -196,8 +257,11 @@ int main(void)
 {
   // initialisieren
   init();
-  //resetManLight();
+  resetManLight();
+  //srTriggerParallelLoad();
+  //srTriggerClock();
 
+  
   // start TWI (I²C) slave mode
   usi_twi_slave(0x22, 0, &twi_callback, &twi_idle_callback);
 
@@ -248,24 +312,29 @@ void dechatterKey() {
   if( input != key_state ) {
     key_counter--;
     if( key_counter == 0xFF ) {
-      key_counter = 5;
+      key_counter = 3;
       key_state = input;
       if( input )
         key_press = 1;
     }
   }
   else
-    key_counter = 5;
+    key_counter = 3;
 }
 
 uint8_t get_key_press()
 {
   uint8_t result;
  
+  // store state and disable interrupts
+  const uint8_t _sreg = SREG;
   cli();
+  
   result = key_press;
   key_press = 0;
-  sei();
+  
+  // restore state
+  SREG = _sreg;
  
   return result;
 }
@@ -281,7 +350,8 @@ void doBeep() {
     
     if (!beep_delay) {
       toggleBeeper();
-      beep_delay = 12;
+      //beep_delay = 12;
+      beep_delay = snd_delay;
     }
   }
 }
