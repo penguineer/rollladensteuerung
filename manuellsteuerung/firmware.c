@@ -153,9 +153,9 @@ static void twi_idle_callback(void) {
 void init(void) {
   /*
    * Pin-Config PortA:
-   *   PA0: 
-   *   PA1: 
-   *   PA2: 
+   *   PA0: SR: serial data output (output)
+   *   PA1: SR: parallel load low-active (output)
+   *   PA2: SR: clock input low-high (output)
    *   PA3: 
    *   PA4: I2C SDC
    *   PA5: INT (out)
@@ -229,7 +229,7 @@ void checkManualLight() {
     
     if (!man_blink) {
       toggleManLight();
-      man_blink = 16000;
+      man_blink = 20000;
     }
   }
 }
@@ -281,7 +281,7 @@ void doBeep() {
     
     if (!beep_delay) {
       toggleBeeper();
-      beep_delay = 10;
+      beep_delay = 12;
     }
   }
 }
