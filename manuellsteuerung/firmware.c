@@ -28,6 +28,14 @@
 static volatile char G_output = 0;
 
 
+inline void setPortA(char mask) {
+  PORTA |= mask;
+}
+
+inline void resetPortA(char mask) {
+  PORTA &= ~mask; 
+}
+
 inline void setPortB(char mask) {
   PORTB |= mask;
 }
@@ -44,7 +52,24 @@ inline int getManualSwitch() {
   return (PINB & (1<<PB1)) == (1<<PB1);
 }
 
+/// Beep Functions
 
+static volatile uint8_t beep = 1;
+
+inline void setBeeper() {
+  setPortA(1<<PA7);
+}
+
+inline void resetBeeper() {
+   resetPortA(1<<PA7);
+}
+
+inline void toggleBeeper() {
+  if (PINA & (1<<PA7))
+    resetBeeper();
+  else
+    setBeeper();
+}
 /// Manual Light Functions
 
 /*
@@ -52,7 +77,7 @@ inline int getManualSwitch() {
  * 1 blink
  * 2 on
  */
-static volatile int lightState = 1;
+static volatile uint8_t lightState = 1;
 
 inline void setManLight() {
   setPortB(1<<PB0);
@@ -112,11 +137,13 @@ static void twi_idle_callback(void) {
   // void
   //isManual = get_key_press();
   if (get_key_press()) {
-    if (isManual)
+    if (isManual) {
       lightState = 1;
-    else
+      beep = 0;
+    } else {
       lightState = 2;
-      
+      beep = 1;
+    }
     isManual = !isManual;
   }
   //adjustManLight();
@@ -133,9 +160,9 @@ void init(void) {
    *   PA4: I2C SDC
    *   PA5: INT (out)
    *   PA6: I2C SDA
-   *   PA7: Beeper
+   *   PA7: Beeper (out)
    */
-  DDRA  = 0b0101111;
+  DDRA  = 0b11011111;
   // PullUp für Eingänge
   PORTA = 0b11111111;
   /*
@@ -151,20 +178,6 @@ void init(void) {
 
    /*  disable interrupts  */
    cli();
-   
-   
-   /*  set clock   */
-  //CLKPR = (1 << CLKPCE);  /*  enable clock prescaler update       */
-  //CLKPR = 0;              /*  set clock to maximum                */
-
-  /*  timer init  */
-  //TIFR1 &= ~(1 << TOV1);   /*  clear timer0 overflow interrupt flag    */
-  //TIMSK1 |= (1 << TOIE1);  /*  enable timer0 overflow interrupt        */
-
-  /*  start timer0 by setting last 3 bits in timer0 control register B
-   *  to any clock source */
-  //TCCR1B = (1 << CS02) | (1 << CS00);
-  //TCCR1B = (1 << CS00);
 
   // Do not connect the timer overflow with the I/O port
   TCCR0A = 0;
@@ -175,7 +188,7 @@ void init(void) {
   TIFR0 |= (1 << TOV0);
 
   // Global Interrupts aktivieren
-  sei();  
+  sei();
 }
 
 
@@ -183,7 +196,7 @@ int main(void)
 {
   // initialisieren
   init();
-  resetManLight();
+  //resetManLight();
 
   // start TWI (I²C) slave mode
   usi_twi_slave(0x22, 0, &twi_callback, &twi_idle_callback);
@@ -194,7 +207,7 @@ int main(void)
 
 /// Timer: Manual Light
 
-volatile int man_blink = 0;
+volatile uint16_t man_blink = 0;
 
 void checkManualLight() {
   // off
@@ -202,13 +215,13 @@ void checkManualLight() {
     resetManLight();
     return;
   }
-    
+
   // on
   if (lightState == 2) { 
     setManLight();
     return;
   }
-  
+
   // blink
   if (lightState == 1) {
     if (man_blink)
@@ -216,7 +229,7 @@ void checkManualLight() {
     
     if (!man_blink) {
       toggleManLight();
-      man_blink = 1000*1000;
+      man_blink = 16000;
     }
   }
 }
@@ -257,9 +270,26 @@ uint8_t get_key_press()
   return result;
 }
 
+/// Timer: Beep
+
+volatile uint16_t beep_delay = 0;
+
+void doBeep() {
+  if (beep) {
+    if (beep_delay)
+      beep_delay--;
+    
+    if (!beep_delay) {
+      toggleBeeper();
+      beep_delay = 10;
+    }
+  }
+}
+
 ISR (TIM0_OVF_vect)
 {
   dechatterKey();
   checkManualLight();
+  doBeep();
 }
 
