@@ -222,6 +222,28 @@ static void twi_callback(uint8_t buffer_size,
 
 /// TWI
 
+//flag state change
+inline void i3c_stateChange() {
+  // port A5 as output
+  DDRA |= (1 << PA5);
+  // set to low
+  PORTA &= ~(1 << PA5);
+}
+
+// put to listening mode
+inline void i3c_tristate() {
+  // port A5 as input
+  DDRA &= ~(1 << PA5);
+  // no pull-up
+  PORTA &= ~(1 << PA5);
+}
+
+inline uint8_t i3c_state() {
+  return (PINA & (1 << PA5)) >> PA5;
+}
+
+
+
 uint8_t manualKeyPressed();
 uint8_t getSwitchState();
 
@@ -250,7 +272,9 @@ static void twi_idle_callback(void) {
 
   if (sr != registered_switch_state) { 
     registered_switch_state = sr;
-      setBeepPattern(0x01);
+    setBeepPattern(0x01);
+    // notify the state change
+    i3c_stateChange();
   }
 
   // restore state
@@ -269,9 +293,10 @@ void init(void) {
    *   PA6: I2C SDA
    *   PA7: Beeper (out)
    */
-  DDRA  = 0b11011110;
+  DDRA  = 0b11001110;
   // PullUp für Eingänge
-  PORTA = 0b11111110;
+  PORTA = 0b10001110;
+
   /*
    * Pin-Config PortB:
    *   PB0: Anzeige Manual Mode (out)
@@ -303,7 +328,9 @@ int main(void)
 {
   // initialisieren
   init();
+  _delay_ms(1);
   resetManLight();
+  registered_switch_state = getSwitchState();
   //srTriggerParallelLoad();
   //srTriggerClock();
 
@@ -345,7 +372,7 @@ void checkManualLight() {
   if (lightState == 1) {
     if (man_blink)
       man_blink--;
-    
+
     if (!man_blink) {
       toggleManLight();
       man_blink = 3000;
@@ -426,14 +453,14 @@ void doBeep() {
   if (beep_pattern || beep) {
     if (beep_delay)
       beep_delay--;
-      
+
     if (!beep_delay) {
       // next sound from beep pattern
       beep = beep_pattern & 0x01;
       beep_pattern = beep_pattern >> 1;
       beep_delay = 250;
     }
-    
+
     if ( (beep_delay & 0x01) && beep)
 	toggleBeeper();
   }
