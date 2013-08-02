@@ -58,7 +58,18 @@ inline int getManualSwitch() {
 
 /// Beep Functions
 
-static volatile uint8_t beep = 1;
+uint8_t beep_pattern = 0;
+
+inline void setBeepPattern(const uint8_t pattern) {
+  // store state and disable interrupts
+  const uint8_t _sreg = SREG;
+  cli();
+
+  beep_pattern = pattern;
+
+  // restore state
+  SREG = _sreg;
+}
 
 inline void setBeeper() {
   setPortA(1<<PA7);
@@ -213,9 +224,11 @@ static void twi_callback(uint8_t buffer_size,
   }
 }
 
-uint8_t get_key_press();
 
-uint8_t beep_pattern = 0;
+/// TWI
+
+uint8_t get_key_press();
+uint8_t getSwitchState();
 
 static void twi_idle_callback(void) {
   // store state and disable interrupts
@@ -225,15 +238,14 @@ static void twi_idle_callback(void) {
   
   // void
   if (get_key_press()) {
-    const uint8_t sr = getShiftValue();
+    const uint8_t sr = getSwitchState();
 
     if (isManual) {
       lightState = 1;
       beep_pattern = 0;
     } else {
       lightState = 2;
-      beep_pattern = sr;
-      //snd_delay = sr;
+      setBeepPattern(sr);
     }
     
     //debug_sr(sr);
@@ -296,8 +308,8 @@ int main(void)
   //srTriggerParallelLoad();
   //srTriggerClock();
 
-  beep_pattern = 0b00010101;
-  // blink as start signal
+  // blink and beep as start signal
+  setBeepPattern(0b00010101);
   int i = 5;
   while (i--) {
     setManLight();
@@ -348,6 +360,8 @@ void checkManualLight() {
 /// Timer: Manual Key
 
 // nach http://www.mikrocontroller.net/articles/Entprellung#Softwareentprellung
+#define DECHATTER_COUNTER 3
+
 uint8_t key_state;
 uint8_t key_counter;
 volatile uint8_t key_press = 0;
@@ -359,14 +373,14 @@ void dechatterKey() {
   if( input != key_state ) {
     key_counter--;
     if( key_counter == 0 ) {
-      key_counter = 3;
+      key_counter = DECHATTER_COUNTER;
       key_state = input;
       if( input )
         key_press = 1;
     }
   }
   else
-    key_counter = 3;
+    key_counter = DECHATTER_COUNTER;
 }
 
 uint8_t get_key_press()
@@ -386,20 +400,37 @@ uint8_t get_key_press()
   return result;
 }
 
+/// Timer: Switches
+volatile uint8_t switch_state = 0;
+uint8_t switch_counter;
+
+void dechatterSwitches() {
+  uint8_t input = getShiftValue();
+  
+  if (input != switch_state) {
+    switch_counter--;
+    if (switch_counter == 0) {
+      switch_counter = DECHATTER_COUNTER;
+      switch_state = input;
+    }
+  } else
+    switch_counter = DECHATTER_COUNTER;
+}
+
+uint8_t getSwitchState() {
+  return switch_state;
+}
+
 /// Timer: Beep
 
-volatile uint16_t beep_delay = 0;
-volatile uint16_t beep_freq = 0;
-
+static volatile uint8_t beep = 1;
+volatile uint8_t beep_delay = 0;
 
 void doBeep() {
   if (beep_pattern || beep) {
     if (beep_delay)
       beep_delay--;
       
-    if (beep_freq)
-      beep_freq--;
-    
     if (!beep_delay) {
       // next sound from beep pattern
       beep = beep_pattern & 0x01;
@@ -407,17 +438,15 @@ void doBeep() {
       beep_delay = 250;
     }
     
-    if (!beep_freq) {
-      if (beep)
+    if ( (beep_delay & 0x01) && beep)
 	toggleBeeper();
-      beep_freq = 2;
-    }
   }
 }
 
 ISR (TIM0_OVF_vect)
 {
   dechatterKey();
+  dechatterSwitches();
   checkManualLight();
   doBeep();
 }
