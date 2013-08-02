@@ -1,8 +1,8 @@
-#PROGRAMMER = avrisp2
-PROGRAMMER = usbasp
+PROGRAMMER = avrisp2
+#PROGRAMMER = usbasp
 #PROGRAMMER = usbtiny
-CPU_GCC = attiny24
-CPU_DUDE = t24
+CPU_GCC = attiny44
+CPU_DUDE = t44
 
 F_CPU = 8000000
 

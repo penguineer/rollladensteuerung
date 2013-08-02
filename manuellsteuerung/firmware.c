@@ -23,6 +23,10 @@
 
 #include "usitwislave.h"
 
+// from http://www.rn-wissen.de/index.php/Inline-Assembler_in_avr-gcc#nop
+#define nop() \
+   asm volatile ("nop")
+
 
 // Shift register output state
 static volatile char G_output = 0;
@@ -113,41 +117,71 @@ inline void adjustManLight() {
 inline void srTriggerParallelLoad() {
   // PL is active low
   resetPortA(1<<PIN_PL);
-  _delay_us(1);
+  nop();
   setPortA(1<<PIN_PL);
+  nop();
 }
 
 inline void srTriggerClock() {
-  // PL is active low
   setPortA(1<<PIN_CP);
-  _delay_ms(1);
+  nop();
   resetPortA(1<<PIN_CP);
-  _delay_ms(1);
+  nop();
 }
 
 // Wert des Schieberegisters auslesen
 uint8_t getShiftValue() {
   uint8_t data = 0;
 
-  // set clock to a defined state
+  // set clock to low state
   resetPortA(1<<PIN_CP);
-  
+
   // pull parallel register
   srTriggerParallelLoad();
+  _delay_us(10);
 
   uint8_t i;
   for (i = 0; i < 8; i++) {
-    srTriggerClock();
-
-    // get the bit
-    const uint8_t b = (PINA & (1 << PIN_Q7)) ? 0 : 1;
+    // get the data
+    const uint8_t b = (PINA & (1 << PIN_Q7)) ? 1 : 0;
 
     // store bit in data
     data = data << 1;
     data += b;
+
+    // clock signal
+    srTriggerClock();
   }
   
   return data;
+}
+
+void debug_sr(uint8_t sr) {
+  uint8_t data = sr;
+  
+  resetManLight();
+  _delay_ms(1000);
+  
+  uint8_t i;
+  for (i = 0; i < 8; i++) {
+    const uint8_t b = data & 0x01;
+    data = data >> 1;
+    
+    setManLight();
+    _delay_ms(100);
+    if (data)
+      _delay_ms(200);
+    
+    resetManLight();
+    
+    if (!data)
+      _delay_ms(200);
+    
+    _delay_ms(10);
+  }
+  
+  setManLight();
+  _delay_ms(1000);
 }
 
 
@@ -179,7 +213,6 @@ static void twi_callback(uint8_t buffer_size,
   }
 }
 
-
 uint8_t get_key_press();
 
 uint16_t snd_delay = 10000;
@@ -191,7 +224,6 @@ static void twi_idle_callback(void) {
 
   
   // void
-  //isManual = get_key_press();
   if (get_key_press()) {
     if (isManual) {
       lightState = 1;
@@ -199,13 +231,15 @@ static void twi_idle_callback(void) {
     } else {
       lightState = 2;
       beep = 1;
-    //  snd_delay = getShiftValue();
+      snd_delay = getShiftValue();
     }
     const uint8_t sr = getShiftValue();
-    isManual = (sr & 0x01) ? 0 : 1;
-    //isManual = !isManual;
+    
+    //debug_sr(sr);
+    
+    //isManual = (sr & 0x04) ? 0 : 1;
+    isManual = !isManual;
   }
-  //adjustManLight();
 
   // restore state
   SREG = _sreg;
@@ -243,7 +277,7 @@ void init(void) {
   // Do not connect the timer overflow with the I/O port
   TCCR0A = 0;
   // Set prescaler and start the timer
-  TCCR0B = (1 << CS00); // | (1 << CS02);
+  TCCR0B = (1 << CS00) | (1 << CS02);
   // Enable timer overflow interrupt
   TIMSK0 |= (1 << TOIE0);
   TIFR0 |= (1 << TOV0);
@@ -261,10 +295,21 @@ int main(void)
   //srTriggerParallelLoad();
   //srTriggerClock();
 
-  
+  // blink as start signal
+  int i = 5;
+  while (i--) {
+    setManLight();
+    _delay_ms(50);
+    resetManLight();
+    _delay_ms(50);
+  }
+
   // start TWI (I²C) slave mode
   usi_twi_slave(0x22, 0, &twi_callback, &twi_idle_callback);
-
+  
+  while(1)
+    twi_idle_callback();
+      
   return 0;
 }
 
@@ -293,7 +338,7 @@ void checkManualLight() {
     
     if (!man_blink) {
       toggleManLight();
-      man_blink = 20000;
+      man_blink = 12;
     }
   }
 }
@@ -311,7 +356,7 @@ void dechatterKey() {
  
   if( input != key_state ) {
     key_counter--;
-    if( key_counter == 0xFF ) {
+    if( key_counter == 0 ) {
       key_counter = 3;
       key_state = input;
       if( input )
