@@ -225,15 +225,17 @@ static void twi_callback(uint8_t buffer_size,
 uint8_t manualKeyPressed();
 uint8_t getSwitchState();
 
+uint8_t registered_switch_state = 0;
+
 static void twi_idle_callback(void) {
   // store state and disable interrupts
   const uint8_t _sreg = SREG;
   cli();
 
-  
+  const uint8_t sr = getSwitchState();
+
   // void
   if (manualKeyPressed()) {
-    const uint8_t sr = getSwitchState();
 
     if (isManual) {
       lightState = 1;
@@ -246,6 +248,11 @@ static void twi_idle_callback(void) {
     isManual = !isManual;
   }
 
+  if (sr != registered_switch_state) { 
+    registered_switch_state = sr;
+      setBeepPattern(0x01);
+  }
+
   // restore state
   SREG = _sreg;
 }
@@ -254,7 +261,7 @@ void init(void) {
   /*
    * Pin-Config PortA:
    *   PA0: SR: serial data (input)
-   *   PA1: SR: parallel load low-active (output)
+   *   PA1: SR: parallel load, low-active (output)
    *   PA2: SR: clock (output)
    *   PA3: 
    *   PA4: I2C SDC
@@ -268,13 +275,13 @@ void init(void) {
   /*
    * Pin-Config PortB:
    *   PB0: Anzeige Manual Mode (out)
-   *   PB1: Schalter Manuel Mode (in)
+   *   PB1: Schalter Manuel Mode, low-active (in)
    *   PB2: 
    *   PB3: 
    */
   DDRB  = 0b1111101;
   // PullUp für Eingänge
-  PORTB = 0b11111101;
+  PORTB = 0b11111111;
 
    /*  disable interrupts  */
    cli();
@@ -301,7 +308,7 @@ int main(void)
   //srTriggerClock();
 
   // blink and beep as start signal
-  setBeepPattern(0b00010101);
+  setBeepPattern(0x15);
   int i = 5;
   while (i--) {
     setManLight();
@@ -364,7 +371,7 @@ void dechatterKey() {
     if( key_counter == 0 ) {
       key_counter = DECHATTER_COUNTER;
       key_state = input;
-      if( input )
+      if( !input )
         key_press = 1;
     }
   }
