@@ -138,7 +138,7 @@ uint8_t getShiftValue() {
 
   // pull parallel register
   srTriggerParallelLoad();
-  _delay_us(10);
+  _delay_us(1);
 
   uint8_t i;
   for (i = 0; i < 8; i++) {
@@ -209,7 +209,7 @@ static void twi_callback(uint8_t buffer_size,
 
   if (input_buffer_length) {
     const char cmd  = (input_buffer[0] & 0xF0) >> 4;
-    const char data = input_buffer[0] & 0x0F;    
+    const char data = input_buffer[0] & 0x0F;
   }
 }
 
@@ -225,15 +225,16 @@ static void twi_idle_callback(void) {
   
   // void
   if (get_key_press()) {
+    const uint8_t sr = getShiftValue();
+
     if (isManual) {
       lightState = 1;
       beep = 0;
     } else {
       lightState = 2;
       beep = 1;
-      snd_delay = getShiftValue();
+      snd_delay = sr;
     }
-    const uint8_t sr = getShiftValue();
     
     //debug_sr(sr);
     
@@ -277,7 +278,7 @@ void init(void) {
   // Do not connect the timer overflow with the I/O port
   TCCR0A = 0;
   // Set prescaler and start the timer
-  TCCR0B = (1 << CS00) | (1 << CS02);
+  TCCR0B = (1 << CS01); // | (1 << CS02);
   // Enable timer overflow interrupt
   TIMSK0 |= (1 << TOIE0);
   TIFR0 |= (1 << TOV0);
@@ -338,7 +339,7 @@ void checkManualLight() {
     
     if (!man_blink) {
       toggleManLight();
-      man_blink = 12;
+      man_blink = 3000;
     }
   }
 }
