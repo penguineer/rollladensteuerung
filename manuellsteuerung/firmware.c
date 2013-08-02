@@ -138,8 +138,8 @@ uint8_t getShiftValue() {
 
   // pull parallel register
   srTriggerParallelLoad();
-  _delay_us(1);
 
+  
   uint8_t i;
   for (i = 0; i < 8; i++) {
     // get the data
