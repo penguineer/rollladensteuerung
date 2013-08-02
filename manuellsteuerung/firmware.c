@@ -169,12 +169,12 @@ void debug_sr(uint8_t sr) {
     
     setManLight();
     _delay_ms(100);
-    if (data)
+    if (b)
       _delay_ms(200);
     
     resetManLight();
     
-    if (!data)
+    if (!b)
       _delay_ms(200);
     
     _delay_ms(10);
@@ -215,7 +215,7 @@ static void twi_callback(uint8_t buffer_size,
 
 uint8_t get_key_press();
 
-uint16_t snd_delay = 10000;
+uint8_t beep_pattern = 0;
 
 static void twi_idle_callback(void) {
   // store state and disable interrupts
@@ -229,11 +229,11 @@ static void twi_idle_callback(void) {
 
     if (isManual) {
       lightState = 1;
-      beep = 0;
+      beep_pattern = 0;
     } else {
       lightState = 2;
-      beep = 1;
-      snd_delay = sr;
+      beep_pattern = sr;
+      //snd_delay = sr;
     }
     
     //debug_sr(sr);
@@ -296,6 +296,7 @@ int main(void)
   //srTriggerParallelLoad();
   //srTriggerClock();
 
+  beep_pattern = 0b00010101;
   // blink as start signal
   int i = 5;
   while (i--) {
@@ -388,16 +389,28 @@ uint8_t get_key_press()
 /// Timer: Beep
 
 volatile uint16_t beep_delay = 0;
+volatile uint16_t beep_freq = 0;
+
 
 void doBeep() {
-  if (beep) {
+  if (beep_pattern || beep) {
     if (beep_delay)
       beep_delay--;
+      
+    if (beep_freq)
+      beep_freq--;
     
     if (!beep_delay) {
-      toggleBeeper();
-      //beep_delay = 12;
-      beep_delay = snd_delay;
+      // next sound from beep pattern
+      beep = beep_pattern & 0x01;
+      beep_pattern = beep_pattern >> 1;
+      beep_delay = 250;
+    }
+    
+    if (!beep_freq) {
+      if (beep)
+	toggleBeeper();
+      beep_freq = 2;
     }
   }
 }
