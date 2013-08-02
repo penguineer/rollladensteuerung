@@ -130,14 +130,12 @@ inline void srTriggerParallelLoad() {
   resetPortA(1<<PIN_PL);
   nop();
   setPortA(1<<PIN_PL);
-  nop();
 }
 
 inline void srTriggerClock() {
   setPortA(1<<PIN_CP);
   nop();
   resetPortA(1<<PIN_CP);
-  nop();
 }
 
 // Wert des Schieberegisters auslesen
@@ -153,12 +151,9 @@ uint8_t getShiftValue() {
   
   uint8_t i;
   for (i = 0; i < 8; i++) {
-    // get the data
-    const uint8_t b = (PINA & (1 << PIN_Q7)) ? 1 : 0;
-
     // store bit in data
-    data = data << 1;
-    data += b;
+    data <<= 1;
+    data += (PINA & (1 << PIN_Q7)) >> PIN_Q7;
 
     // clock signal
     srTriggerClock();
@@ -176,7 +171,7 @@ void debug_sr(uint8_t sr) {
   uint8_t i;
   for (i = 0; i < 8; i++) {
     const uint8_t b = data & 0x01;
-    data = data >> 1;
+    data >>= 1;
     
     setManLight();
     _delay_ms(100);
@@ -227,7 +222,7 @@ static void twi_callback(uint8_t buffer_size,
 
 /// TWI
 
-uint8_t get_key_press();
+uint8_t manualKeyPressed();
 uint8_t getSwitchState();
 
 static void twi_idle_callback(void) {
@@ -237,7 +232,7 @@ static void twi_idle_callback(void) {
 
   
   // void
-  if (get_key_press()) {
+  if (manualKeyPressed()) {
     const uint8_t sr = getSwitchState();
 
     if (isManual) {
@@ -247,10 +242,7 @@ static void twi_idle_callback(void) {
       lightState = 2;
       setBeepPattern(sr);
     }
-    
-    //debug_sr(sr);
-    
-    //isManual = (sr & 0x04) ? 0 : 1;
+
     isManual = !isManual;
   }
 
@@ -320,10 +312,7 @@ int main(void)
 
   // start TWI (I²C) slave mode
   usi_twi_slave(0x22, 0, &twi_callback, &twi_idle_callback);
-  
-  while(1)
-    twi_idle_callback();
-      
+
   return 0;
 }
 
@@ -383,7 +372,7 @@ void dechatterKey() {
     key_counter = DECHATTER_COUNTER;
 }
 
-uint8_t get_key_press()
+uint8_t manualKeyPressed()
 {
   uint8_t result;
  
