@@ -1,0 +1,21 @@
+DSUB:
+pin#	funcion (0/1)
+1	vcc
+2	out 1 (up/down)
+3	out 2 (up/down)
+4	out 3 (up/down)
+5	out 4 (up/down)
+6	out 1 (off/on)
+7	out 2 (off/on)
+8	out 3 (off/on)
+9	out 4 (off/on)
+
+Molex:
+1	5V
+2	GND
+3	GND
+4	12V - not used
+
+orange headers:
+2pin	230V in
+3pin	GND-UP-DOWN
