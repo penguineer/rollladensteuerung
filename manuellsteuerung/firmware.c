@@ -72,15 +72,15 @@ inline void setBeepPattern(const uint8_t pattern) {
 }
 
 inline void setBeeper() {
-  setPortA(1<<PA7);
+  setPortA(1<<PA3);
 }
 
 inline void resetBeeper() {
-   resetPortA(1<<PA7);
+   resetPortA(1<<PA3);
 }
 
 inline void toggleBeeper() {
-  if (PINA & (1<<PA7))
+  if (PINA & (1<<PA3))
     resetBeeper();
   else
     setBeeper();
@@ -119,6 +119,23 @@ inline void adjustManLight() {
       resetManLight();
 }
 
+/// Status Light Functions
+
+inline void setStatusRed() {
+  setPortB(1<<PB2);
+}
+
+inline void resetStatusRed() {
+   resetPortB(1<<PB2);
+}
+
+inline void setStatusGreen() {
+  setPortA(1<<PA7);
+}
+
+inline void resetStatusGreen() {
+   resetPortA(1<<PA7);
+}
 
 /// Direction Switch Functions
 #define PIN_Q7 PA0
@@ -200,12 +217,8 @@ void debug_sr(uint8_t sr) {
  * 
  * data (DDDD)
  */
-#define CMD_ALL_STOP  0x0
-#define CMD_STOP      0x1
-#define CMD_UP        0x2
-#define CMD_DOWN      0x3
-#define CMD_OPEN      0x4
-#define CMD_CLOSE     0x5
+#define CMD_BEEP        0x01
+#define CMD_MANUAL_MODE 0x02
 
 static void twi_callback(uint8_t buffer_size,
                          volatile uint8_t input_buffer_length, 
@@ -216,7 +229,18 @@ static void twi_callback(uint8_t buffer_size,
   if (input_buffer_length) {
     const char cmd  = (input_buffer[0] & 0xF0) >> 4;
     const char data = input_buffer[0] & 0x0F;
+
+    switch (cmd) {
+      case (CMD_BEEP): {
+	setBeepPattern(data);
+      }; break;
+      case (CMD_MANUAL_MODE): {
+	lightState = data;
+      }; break;
+    }
+
   }
+  
 }
 
 
@@ -287,22 +311,22 @@ void init(void) {
    *   PA0: SR: serial data (input)
    *   PA1: SR: parallel load, low-active (output)
    *   PA2: SR: clock (output)
-   *   PA3: 
+   *   PA3: Beeper (out)
    *   PA4: I2C SDC
    *   PA5: INT (out)
    *   PA6: I2C SDA
-   *   PA7: Beeper (out)
+   *   PA7: Anzeige Status Grün
    */
   DDRA  = 0b11001110;
   // PullUp für Eingänge
-  PORTA = 0b10001110;
+  PORTA = 0b00001110;
 
   /*
    * Pin-Config PortB:
    *   PB0: Anzeige Manual Mode (out)
    *   PB1: Schalter Manuel Mode, low-active (in)
-   *   PB2: 
-   *   PB3: 
+   *   PB2: Anzeige Status Rot
+   *   PB3: RESET
    */
   DDRB  = 0b1111101;
   // PullUp für Eingänge
@@ -329,21 +353,28 @@ int main(void)
   // initialisieren
   init();
   _delay_ms(1);
-  resetManLight();
   registered_switch_state = getSwitchState();
-  //srTriggerParallelLoad();
-  //srTriggerClock();
 
   // blink and beep as start signal
   setBeepPattern(0x15);
-  int i = 5;
+  int i=5;
   while (i--) {
     setManLight();
+    setStatusGreen();
     _delay_ms(50);
+    setStatusRed();
+    _delay_ms(100);
     resetManLight();
+    resetStatusGreen();
+    _delay_ms(50);
+    resetStatusRed();
     _delay_ms(50);
   }
+  resetManLight();
+  resetStatusRed();
+  resetStatusGreen();
 
+  
   // start TWI (I²C) slave mode
   usi_twi_slave(0x22, 0, &twi_callback, &twi_idle_callback);
 
