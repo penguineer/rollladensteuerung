@@ -94,6 +94,27 @@ void change_switch (volatile char* o, char idx, char state) {
   *o = d;
 }
 
+/// I3C
+
+//flag state change
+inline void i3c_stateChange() {
+  // port PB1 as output
+  DDRB |= (1 << PB1);
+  // set to low
+  PORTB &= ~(1 << PB1);
+}
+
+// put to listening mode
+inline void i3c_tristate() {
+  // port A5 as input
+  DDRB &= ~(1 << PB1);
+  // no pull-up
+  PORTB &= ~(1 << PB1);
+}
+
+inline uint8_t i3c_state() {
+  return (PINB & (1 << PB1)) >> PB1;
+}
 
 /*
  * I²C Datenformat:
@@ -188,6 +209,8 @@ void init(void) {
     
   // Global Interrupts aktivieren
   sei();  
+  
+  i3c_tristate();
 }
 
 int main(void)

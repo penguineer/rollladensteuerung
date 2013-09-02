@@ -207,44 +207,7 @@ void debug_sr(uint8_t sr) {
   _delay_ms(1000);
 }
 
-
-/*
- * I²C Datenformat:
- * 
- * CCCCDDDD
- * 
- * command (CCCC)
- * 
- * data (DDDD)
- */
-#define CMD_BEEP        0x01
-#define CMD_MANUAL_MODE 0x02
-
-static void twi_callback(uint8_t buffer_size,
-                         volatile uint8_t input_buffer_length, 
-                         volatile const uint8_t *input_buffer,
-                         volatile uint8_t *output_buffer_length, 
-                         volatile uint8_t *output_buffer) {
-
-  if (input_buffer_length) {
-    const char cmd  = (input_buffer[0] & 0xF0) >> 4;
-    const char data = input_buffer[0] & 0x0F;
-
-    switch (cmd) {
-      case (CMD_BEEP): {
-	setBeepPattern(data);
-      }; break;
-      case (CMD_MANUAL_MODE): {
-	lightState = data;
-      }; break;
-    }
-
-  }
-  
-}
-
-
-/// TWI
+/// I3C
 
 //flag state change
 inline void i3c_stateChange() {
@@ -266,12 +229,83 @@ inline uint8_t i3c_state() {
   return (PINA & (1 << PA5)) >> PA5;
 }
 
+uint8_t registered_switch_state = 0;
 
+/*
+ * I²C Datenformat:
+ * 
+ * CCCCDDDD
+ * 
+ * command (CCCC)
+ * 
+ * data (DDDD)
+ */
+#define CMD_RESET       0x00
+#define CMD_BEEP        0x01
+#define CMD_MANUAL_MODE 0x02
+#define CMD_GET_SWITCH  0x03
+
+static void twi_callback(uint8_t buffer_size,
+                         volatile uint8_t input_buffer_length, 
+                         volatile const uint8_t *input_buffer,
+                         volatile uint8_t *output_buffer_length, 
+                         volatile uint8_t *output_buffer) {
+
+  if (input_buffer_length) {
+    const char cmd  = (input_buffer[0] & 0xF0) >> 4;
+    const char data = input_buffer[0] & 0x0F;
+    
+    uint8_t output=0;
+
+    switch (cmd) {
+      case (CMD_RESET): {
+	 i3c_tristate();
+      }
+      case (CMD_BEEP): {
+	setBeepPattern(data);
+      }; break;
+      case (CMD_MANUAL_MODE): {
+	lightState = data;
+      }; break;
+      case (CMD_GET_SWITCH): {
+	 output = 0;
+	 const uint8_t sw = registered_switch_state;
+	 if (data == 1) {
+	   if ( (sw & 0x10) == 0x10)
+	     output = 1;
+	   if ( (sw & 0x08) == 0x08)
+	     output = 2;
+	 }
+	 if (data == 2) {
+	   if ( (sw & 0x04) == 0x04)
+	     output = 1;
+	   if ( (sw & 0x02) == 0x02)
+	     output = 2;
+	 }
+	 if (data == 3) {
+	   if ( (sw & 0x01) == 0x01)
+	     output = 1;
+	   if ( (sw & 0x20) == 0x20)
+	     output = 2;
+	 }
+	 if (data == 4) {
+	   if ( (sw & 0x40) == 0x40)
+	     output = 1;
+	   if ( (sw & 0x80) == 0x80)
+	     output = 2;
+	 }
+      }; break;
+    }
+
+    * output_buffer_length = 1;
+    output_buffer[0] = output;
+  }
+  
+}
 
 uint8_t manualKeyPressed();
 uint8_t getSwitchState();
 
-uint8_t registered_switch_state = 0;
 
 static void twi_idle_callback(void) {
   // store state and disable interrupts
@@ -296,9 +330,17 @@ static void twi_idle_callback(void) {
 
   if (sr != registered_switch_state) { 
     registered_switch_state = sr;
-    setBeepPattern(0x01);
+    //setBeepPattern(0x01);
     // notify the state change
     i3c_stateChange();
+  }
+  
+  if (i3c_state()) {
+    setStatusGreen();
+    resetStatusRed();
+  } else {
+    setStatusRed();
+    resetStatusGreen();
   }
 
   // restore state
@@ -345,6 +387,8 @@ void init(void) {
 
   // Global Interrupts aktivieren
   sei();
+  
+  i3c_tristate();
 }
 
 
