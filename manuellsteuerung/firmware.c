@@ -67,6 +67,20 @@
  * 	Up  - Switch pointing up
  * 	Dwn - Switch pointing down
  */
+
+/*
+ * Block Switch Status
+ * 
+ * +-----------------+------+
+ * | 7 bits reserved | blsw |
+ * +-----------------+------+
+ * 
+ * blsw - Block Switch pressed
+ */
+
+/*
+ * Beep Pattern, 16 Bit cycling MSB to LSB
+ */
    
 // Shift register output state
 static volatile char G_output = 0;
