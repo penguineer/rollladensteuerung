@@ -28,6 +28,31 @@
    asm volatile ("nop")
 
 
+/*
+ * Output Status Byte
+ * ==================
+ * 
+ * *------------*-----------*------*---------*
+ * | Status LED | Block LED | Spkr | I3C INT | 
+ * | bl | r | g | bl1 | bl2 | beep | sw | bl |
+ * *------------*-----------*------*---------*
+ * 
+ * Status LED
+ * 	bl - blink
+ * 	r  - red LED
+ * 	g  - green LED
+ * Block Switch LED bl1bl2
+ * 	00 - off
+ * 	01 - slow blink
+ * 	10 - fast blink
+ * 	11 - on
+ * Speaker
+ * 	beep - Speaker active
+ * I3C INT
+ * 	sw - Switch array changed
+ * 	bl - Block switch changed
+ */
+   
 // Shift register output state
 static volatile char G_output = 0;
 
