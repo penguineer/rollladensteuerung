@@ -32,10 +32,10 @@
  * Output Status Byte
  * ==================
  * 
- * *------------*-----------*------*---------*
+ * +------------+-----------+------+---------+
  * | Status LED | Block LED | Spkr | I3C INT | 
  * | bl | r | g | bl1 | bl2 | beep | sw | bl |
- * *------------*-----------*------*---------*
+ * +----+---+---+-----+-----+------+----+----+
  * 
  * Status LED
  * 	bl - blink
@@ -51,6 +51,21 @@
  * I3C INT
  * 	sw - Switch array changed
  * 	bl - Block switch changed
+ */
+
+/*
+ * Switch Array Status
+ * ===================
+ * 
+ * +----------+----------+----------+----------+
+ * | Switch 1 | Switch 2 | Switch 3 | Switch 4 | 
+ * | Up | Dwn | Up | Dwn | Up | Dwn | Up | Dwn |
+ * +----+-----+----+-----+----+-----+----+-----+
+ * 
+ * Switch N
+ * 	N   - number of switch
+ * 	Up  - Switch pointing up
+ * 	Dwn - Switch pointing down
  */
    
 // Shift register output state
