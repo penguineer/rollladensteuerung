@@ -53,6 +53,31 @@
  * 	bl - Block switch changed
  */
 
+volatile uint8_t _output_status_byte = 0;
+
+#define OSB_Status_Blink 0x80
+#define OSB_Status_Red   0x40
+#define OSB_Status_Green 0x20
+#define OSB_BlSwLED      0x18
+#define OSB_Beep         0x04
+#define OSB_I3C_Sw       0x02
+#define OSB_I3C_Bl       0x01
+
+#define OSB_HAS_STATUS(st)   ((_output_status_byte & st) == st)
+#define OSB_SET_STATUS(st)   (_output_status_byte |= st)
+#define OSB_CLEAR_STATUS(st) (_output_status_byte &= ~st)
+
+#define OSB_Block_Off    0x00
+#define OSB_Block_Slow   0x01
+#define OSB_Block_Fast   0x02
+#define OSB_Block_On     0x03
+
+#define OSB_Get_Block_Status    ((_output_status_byte & OSB_BlSwLED) >> 3)
+#define OSB_Set_Block_Status(st) (\
+	_output_status_byte = \
+	((_output_status_byte & ~(OSB_Block_On<<3)) | (st << 3)) \
+    )
+
 /*
  * Switch Array Status
  * ===================
@@ -68,6 +93,8 @@
  * 	Dwn - Switch pointing down
  */
 
+volatile uint8_t _switch_array_status = 0;
+
 /*
  * Block Switch Status
  * 
@@ -78,52 +105,49 @@
  * blsw - Block Switch pressed
  */
 
+volatile uint8_t _block_switch_status = 0;
+
+#define BSS_BlockSwitch 0x01
+
+#define BSS_HAS_STATUS(st)   ((_block_switch_status & st) == st)
+#define BSS_SET_STATUS(st)   (_block_switch_status |= st)
+#define BSS_CLEAR_STATUS(st) (_block_switch_status &= ~st)
+
 /*
  * Beep Pattern, 16 Bit cycling MSB to LSB
  */
-   
-// Shift register output state
-static volatile char G_output = 0;
+
+volatile uint16_t _beep_pattern = 0;
+
+#define BEEP_PATTERN_ACTIVE (_beep_pattern)
+#define BEEP_PATTERN_BEEP (_beep_pattern & 0x01)
+#define DO_BEEP_PATTERN_SHIFT _beep_pattern = _beep_pattern >> 1;
 
 
-inline void setPortA(char mask) {
-  PORTA |= mask;
-}
-
-inline void resetPortA(char mask) {
-  PORTA &= ~mask; 
-}
-
-inline void setPortB(char mask) {
-  PORTB |= mask;
-}
-
-inline void resetPortB(char mask) {
-  PORTB &= ~mask; 
-}
-
-static volatile int isManual = 0;
-
-/// Manual Switch Functions
-
-inline int getManualSwitch() {
-  return (PINB & (1<<PB1)) == (1<<PB1);
-}
-
-/// Beep Functions
-
-uint8_t beep_pattern = 0;
-
-inline void setBeepPattern(const uint8_t pattern) {
+inline void setBeepPattern(const uint16_t pattern) {
   // store state and disable interrupts
   const uint8_t _sreg = SREG;
   cli();
 
-  beep_pattern = pattern;
+  _beep_pattern = pattern;
 
   // restore state
   SREG = _sreg;
 }
+  
+  
+/// Port Helper Macros
+#define setPortA(mask)   (PORTA |= mask)
+#define resetPortA(mask) (PORTA &= ~mask)
+#define setPortB(mask)   (PORTB |= mask)
+#define resetPortB(mask) (PORTB &= ~mask)
+
+/// Manual Switch Functions
+inline int getManualSwitch() {
+  return (PINB & (1<<PB1)) == (1<<PB1);
+}
+
+/// Beeper Port Functions
 
 inline void setBeeper() {
   setPortA(1<<PA3);
@@ -141,40 +165,24 @@ inline void toggleBeeper() {
 }
 
 
-/// Manual Light Functions
-
-/*
- * 0 off
- * 1 blink
- * 2 on
- */
-static volatile uint8_t lightState = 1;
-
-inline void setManLight() {
+/// Block Light Functions
+inline void setBlockLight() {
   setPortB(1<<PB0);
+  
 }
 
-inline void resetManLight() {
+inline void resetBlockLight() {
    resetPortB(1<<PB0);
 }
 
-inline void toggleManLight() {
+inline void toggleBlockLight() {
   if (PINB & (1<<PB0))
-    resetManLight();
+    resetBlockLight();
   else
-    setManLight();
-}
-
-
-inline void adjustManLight() {
-  if (lightState)
-      setManLight();
-    else
-      resetManLight();
+    setBlockLight();
 }
 
 /// Status Light Functions
-
 inline void setStatusRed() {
   setPortB(1<<PB2);
 }
@@ -189,6 +197,19 @@ inline void setStatusGreen() {
 
 inline void resetStatusGreen() {
    resetPortA(1<<PA7);
+}
+
+inline void toggleStatus() {
+  if (PINA & (1<<PA7)) {
+    resetStatusRed();
+    resetStatusGreen();
+  } else {
+    // only turn on according to status
+    if (OSB_HAS_STATUS(OSB_Status_Red))
+      setStatusRed();
+    if (OSB_HAS_STATUS(OSB_Status_Green))
+      setStatusGreen();
+  }
 }
 
 /// Direction Switch Functions
@@ -233,36 +254,7 @@ uint8_t getShiftValue() {
   return data;
 }
 
-void debug_sr(uint8_t sr) {
-  uint8_t data = sr;
-  
-  resetManLight();
-  _delay_ms(1000);
-  
-  uint8_t i;
-  for (i = 0; i < 8; i++) {
-    const uint8_t b = data & 0x01;
-    data >>= 1;
-    
-    setManLight();
-    _delay_ms(100);
-    if (b)
-      _delay_ms(200);
-    
-    resetManLight();
-    
-    if (!b)
-      _delay_ms(200);
-    
-    _delay_ms(10);
-  }
-  
-  setManLight();
-  _delay_ms(1000);
-}
-
 /// I3C
-
 //flag state change
 inline void i3c_stateChange() {
   // port A5 as output
@@ -282,8 +274,6 @@ inline void i3c_tristate() {
 inline uint8_t i3c_state() {
   return (PINA & (1 << PA5)) >> PA5;
 }
-
-uint8_t registered_switch_state = 0;
 
 /*
  * I²C Datenformat:
@@ -313,17 +303,17 @@ static void twi_callback(uint8_t buffer_size,
 
     switch (cmd) {
       case (CMD_RESET): {
-	 i3c_tristate();
+	 OSB_CLEAR_STATUS( OSB_I3C_Bl + OSB_I3C_Sw );
       }
       case (CMD_BEEP): {
 	setBeepPattern(data);
       }; break;
       case (CMD_MANUAL_MODE): {
-	lightState = data;
+	OSB_Set_Block_Status(data);
       }; break;
       case (CMD_GET_SWITCH): {
 	 output = 0;
-	 const uint8_t sw = registered_switch_state;
+	 const uint8_t sw = _switch_array_status;
 	 if (data == 1) {
 	   if ( (sw & 0x10) == 0x10)
 	     output = 1;
@@ -366,27 +356,19 @@ static void twi_idle_callback(void) {
   const uint8_t _sreg = SREG;
   cli();
 
-  const uint8_t sr = getSwitchState();
 
-  // void
+  // set status bit if manual key had been pressed
   if (manualKeyPressed()) {
-
-    if (isManual) {
-      lightState = 1;
-      beep_pattern = 0;
-    } else {
-      lightState = 2;
-      setBeepPattern(sr);
-    }
-
-    isManual = !isManual;
+    OSB_SET_STATUS(OSB_I3C_Bl);
   }
 
-  if (sr != registered_switch_state) { 
-    registered_switch_state = sr;
-    //setBeepPattern(0x01);
+  // read switch array state and notify state changes
+  const uint8_t sr = getSwitchState();
+  if (sr != _switch_array_status) { 
+    _switch_array_status = sr;
+
     // notify the state change
-    i3c_stateChange();
+    OSB_SET_STATUS(OSB_I3C_Bl);
   }
   
   if (i3c_state()) {
@@ -428,6 +410,9 @@ void init(void) {
   // PullUp für Eingänge
   PORTB = 0b11111111;
 
+  // set I3C INT to tristate
+  i3c_tristate();
+
    /*  disable interrupts  */
    cli();
 
@@ -440,9 +425,7 @@ void init(void) {
   TIFR0 |= (1 << TOV0);
 
   // Global Interrupts aktivieren
-  sei();
-  
-  i3c_tristate();
+  sei();  
 }
 
 
@@ -451,26 +434,18 @@ int main(void)
   // initialisieren
   init();
   _delay_ms(1);
-  registered_switch_state = getSwitchState();
 
   // blink and beep as start signal
   setBeepPattern(0x15);
-  int i=5;
-  while (i--) {
-    setManLight();
-    setStatusGreen();
-    _delay_ms(50);
-    setStatusRed();
-    _delay_ms(100);
-    resetManLight();
-    resetStatusGreen();
-    _delay_ms(50);
-    resetStatusRed();
-    _delay_ms(50);
-  }
-  resetManLight();
-  resetStatusRed();
-  resetStatusGreen();
+  OSB_Set_Block_Status(OSB_Block_On);
+  OSB_SET_STATUS( OSB_Status_Red );
+  _delay_ms(500);
+  OSB_SET_STATUS( OSB_Status_Green );
+  _delay_ms(500);
+  OSB_CLEAR_STATUS( OSB_Status_Red );
+  _delay_ms(500);
+  OSB_CLEAR_STATUS( OSB_Status_Green );
+  OSB_Set_Block_Status( OSB_Block_Off );
 
   
   // start TWI (I²C) slave mode
@@ -480,37 +455,62 @@ int main(void)
 }
 
 
-/// Timer: Manual Light
-
-volatile uint16_t man_blink = 0;
-
-void checkManualLight() {
+/// Timer: Block Light
+volatile uint16_t block_blink = 0;
+void checkBlockLight() {
   // off
-  if (lightState == 0) {
-    resetManLight();
+  if ( OSB_Get_Block_Status == OSB_Block_Off ) {
+    resetBlockLight();
     return;
   }
 
   // on
-  if (lightState == 2) { 
-    setManLight();
+  if ( OSB_Get_Block_Status == OSB_Block_On ) { 
+    setBlockLight();
     return;
   }
 
   // blink
-  if (lightState == 1) {
-    if (man_blink)
-      man_blink--;
+  if ( (OSB_Get_Block_Status == OSB_Block_Slow) || 
+       (OSB_Get_Block_Status == OSB_Block_Fast) ) {
+    if (block_blink)
+      block_blink--;
 
-    if (!man_blink) {
-      toggleManLight();
-      man_blink = 3000;
+    if (!block_blink) {
+      toggleBlockLight();
+      block_blink = (OSB_Get_Block_Status == OSB_Block_Slow) ? 3000 : 1500;
     }
   }
 }
 
-/// Timer: Manual Key
+/// Timer: Status Light
+volatile uint16_t status_blink = 0;
+void checkStatusLight() {
+  // blink
+  if ( OSB_HAS_STATUS(OSB_Status_Blink) ) {
+    if (status_blink)
+      status_blink--;
 
+    if (!status_blink) {
+      toggleStatus();
+      status_blink = 3000;      
+    }
+  } else {
+    // green
+    if (OSB_HAS_STATUS(OSB_Status_Green))
+      setStatusGreen();
+    else
+      resetStatusGreen();
+    
+    // red
+    if (OSB_HAS_STATUS(OSB_Status_Red))
+      setStatusRed();
+    else
+      resetStatusRed();
+  }
+}
+
+/// Timer: Manual Key
 // nach http://www.mikrocontroller.net/articles/Entprellung#Softwareentprellung
 #define DECHATTER_COUNTER 3
 
@@ -574,32 +574,48 @@ uint8_t getSwitchState() {
 }
 
 /// Timer: Beep
-
-static volatile uint8_t beep = 1;
 volatile uint8_t beep_delay = 0;
-
 void doBeep() {
-  if (beep_pattern || beep) {
+  // Call only if there is something to beep
+  if (BEEP_PATTERN_ACTIVE || 
+      OSB_HAS_STATUS(OSB_Beep) ) {
     if (beep_delay)
       beep_delay--;
 
     if (!beep_delay) {
       // next sound from beep pattern
-      beep = beep_pattern & 0x01;
-      beep_pattern = beep_pattern >> 1;
+      if (BEEP_PATTERN_ACTIVE)
+	OSB_SET_STATUS(OSB_Beep);
+      else
+	OSB_CLEAR_STATUS(OSB_Beep);
+      
+      DO_BEEP_PATTERN_SHIFT;
+
       beep_delay = 250;
     }
 
-    if ( (beep_delay & 0x01) && beep)
+    // toggle beeper according to settings and beep pattern
+    if ( (beep_delay & 0x01) && 
+         OSB_HAS_STATUS(OSB_Beep) )
 	toggleBeeper();
   }
+}
+
+/// Timer: I3C Interrupt
+void checkI3CInt() {
+  if (OSB_HAS_STATUS( (OSB_I3C_Bl + OSB_I3C_Sw) ))
+    i3c_stateChange();
+  else
+    i3c_tristate();
 }
 
 ISR (TIM0_OVF_vect)
 {
   dechatterKey();
   dechatterSwitches();
-  checkManualLight();
+  checkBlockLight();
+  checkStatusLight();
   doBeep();
+  checkI3CInt();
 }
 
