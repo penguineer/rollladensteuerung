@@ -199,7 +199,7 @@ inline void resetStatusGreen() {
 }
 
 inline void toggleStatus() {
-  if (PINA & (1<<PA7)) {
+  if ( (PINA & (1<<PA7)) || (PINB & (1<<PB2))) {
     resetStatusRed();
     resetStatusGreen();
   } else {
@@ -307,7 +307,6 @@ static void twi_callback(uint8_t buffer_size,
 	 OSB_CLEAR_STATUS( OSB_I3C_Sw );
 	} else {
 	 OSB_SET_STATUS( OSB_I3C_Bl );
-	 OSB_SET_STATUS( OSB_I3C_Sw );
 	}
       }
       case (CMD_BEEP): {
@@ -374,20 +373,18 @@ static void twi_idle_callback(void) {
     _switch_array_status = sr;
 
     // notify the state change
-    OSB_SET_STATUS(OSB_I3C_Bl);
-
-        setBeepPattern(0x1);
-
+    OSB_SET_STATUS(OSB_I3C_Sw);
+    setBeepPattern(0x1);
   }
   
   if (i3c_state()) 
-    OSB_SET_STATUS( OSB_Status_Red );
-  else 
     OSB_CLEAR_STATUS( OSB_Status_Red );
+  else 
+    OSB_SET_STATUS( OSB_Status_Red );
   
   
   if ( OSB_HAS_STATUS( OSB_I3C_Bl ) || 
-       OSB_HAS_STATUS( OSB_I3C_Sw )      )
+       OSB_HAS_STATUS( OSB_I3C_Sw ) )
      OSB_CLEAR_STATUS( OSB_Status_Green );
   else
      OSB_SET_STATUS( OSB_Status_Green );
@@ -432,7 +429,7 @@ void init(void) {
   // Do not connect the timer overflow with the I/O port
   TCCR0A = 0;
   // Set prescaler and start the timer
-  TCCR0B = (1 << CS01); // | (1 << CS02);
+  TCCR0B = (1 << CS01);
   // Enable timer overflow interrupt
   TIMSK0 |= (1 << TOIE0);
   TIFR0 |= (1 << TOV0);
@@ -474,20 +471,17 @@ void checkBlockLight() {
   // off
   if ( OSB_Get_Block_Status == OSB_Block_Off ) {
     resetBlockLight();
-    return;
-  }
-
+  } else
   // on
   if ( OSB_Get_Block_Status == OSB_Block_On ) { 
     setBlockLight();
-    return;
-  }
-
+  } else
   // blink
-  if ( (OSB_Get_Block_Status == OSB_Block_Slow) || 
-       (OSB_Get_Block_Status == OSB_Block_Fast) ) {
-
-    if (! (block_blink--) ) {
+  {
+    if (block_blink)
+      block_blink--;
+      
+    if (!block_blink) {
       toggleBlockLight();
       block_blink = (OSB_Get_Block_Status == OSB_Block_Slow) ? 3000 : 1000;
     }
@@ -499,9 +493,12 @@ volatile uint16_t status_blink = 0;
 void checkStatusLight() {
   // blink
   if ( OSB_HAS_STATUS(OSB_Status_Blink) ) {
-    if (! (status_blink--) ) {
+    if (status_blink)
+      status_blink--;
+  
+    if (!status_blink ) {
       toggleStatus();
-      status_blink = 3000;      
+      status_blink = 3000;
     }
   } else {
     // green
@@ -594,8 +591,12 @@ void doBeep() {
       // next sound from beep pattern
       if (BEEP_PATTERN_BEEP)
 	OSB_SET_STATUS(OSB_Beep);
-      else
+      else {
 	OSB_CLEAR_STATUS(OSB_Beep);
+	// explicitly turn off the beeper 
+	// so that we do not source current on the beeper port
+	resetBeeper();
+      }
       
       DO_BEEP_PATTERN_SHIFT;
 
@@ -612,8 +613,7 @@ void doBeep() {
 /// Timer: I3C Interrupt
 void checkI3CInt() {
   if ( OSB_HAS_STATUS( OSB_I3C_Bl ) || 
-       OSB_HAS_STATUS( OSB_I3C_Sw )
-  )
+       OSB_HAS_STATUS( OSB_I3C_Sw )   )
     i3c_stateChange();
   else
     i3c_tristate();
@@ -621,11 +621,18 @@ void checkI3CInt() {
 
 ISR (TIM0_OVF_vect)
 {
+  // store state and disable interrupts
+  const uint8_t _sreg = SREG;
+  cli();
+  
   dechatterKey();
   dechatterSwitches();
   checkBlockLight();
   checkStatusLight();
-  doBeep();
   checkI3CInt();
+  doBeep();
+  
+  // restore state
+  SREG = _sreg;
 }
 
