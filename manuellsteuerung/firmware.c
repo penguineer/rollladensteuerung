@@ -136,10 +136,10 @@ inline void setBeepPattern(const uint16_t pattern) {
   
   
 /// Port Helper Macros
-#define setPortA(mask)   (PORTA |= mask)
-#define resetPortA(mask) (PORTA &= ~mask)
-#define setPortB(mask)   (PORTB |= mask)
-#define resetPortB(mask) (PORTB &= ~mask)
+#define setPortA(mask)   (PORTA |= (mask))
+#define resetPortA(mask) (PORTA &= ~(mask))
+#define setPortB(mask)   (PORTB |= (mask))
+#define resetPortB(mask) (PORTB &= ~(mask))
 
 /// Manual Switch Functions
 inline int getManualSwitch() {
@@ -287,6 +287,7 @@ inline uint8_t i3c_state() {
 #define CMD_BEEP        0x01
 #define CMD_MANUAL_MODE 0x02
 #define CMD_GET_SWITCH  0x03
+#define CMD_I3C         0x04
 
 static void twi_callback(uint8_t buffer_size,
                          volatile uint8_t input_buffer_length, 
@@ -301,11 +302,13 @@ static void twi_callback(uint8_t buffer_size,
     uint8_t output=0;
 
     switch (cmd) {
-      case (CMD_RESET): {
+      case (CMD_I3C): {
 	 if (data)
-	   OSB_SET_STATUS( OSB_Status_Red );
-	 else
-	   OSB_CLEAR_STATUS( OSB_Status_Red );
+	   OSB_SET_STATUS( OSB_I3C_Bl );
+	 else {
+	   OSB_CLEAR_STATUS( OSB_I3C_Bl );
+	   OSB_CLEAR_STATUS( OSB_I3C_Sw );
+	 }
       }; break;
       case (CMD_BEEP): {
 	setBeepPattern(data);
@@ -319,32 +322,40 @@ static void twi_callback(uint8_t buffer_size,
 	 if (data == 1) {
 	   if ( (sw & 0x10) == 0x10)
 	     output = 1;
-	   if ( (sw & 0x08) == 0x08)
+	   else if ( (sw & 0x08) == 0x08)
 	     output = 2;
+	   else
+	     output = 3;
 	 }
 	 if (data == 2) {
 	   if ( (sw & 0x04) == 0x04)
 	     output = 1;
 	   if ( (sw & 0x02) == 0x02)
 	     output = 2;
+	   else
+	     output = 3;
 	 }
 	 if (data == 3) {
 	   if ( (sw & 0x01) == 0x01)
 	     output = 1;
 	   if ( (sw & 0x20) == 0x20)
 	     output = 2;
+	   else
+	     output = 3;
 	 }
 	 if (data == 4) {
 	   if ( (sw & 0x40) == 0x40)
 	     output = 1;
 	   if ( (sw & 0x80) == 0x80)
 	     output = 2;
+	   else
+	     output = 3;
 	 }
       }; break;
     }
 
-  //  * output_buffer_length = 1;
-  //  output_buffer[0] = output;
+    * output_buffer_length = 1;
+    output_buffer[0] = output;
   }
   
 }
@@ -362,7 +373,6 @@ static void twi_idle_callback(void) {
   // set status bit if manual key had been pressed
   if (manualKeyPressed()) {
     OSB_SET_STATUS(OSB_I3C_Bl);
-    setBeepPattern(0x1);
   }
 
   // read switch array state and notify state changes
@@ -372,14 +382,12 @@ static void twi_idle_callback(void) {
 
     // notify the state change
     OSB_SET_STATUS(OSB_I3C_Sw);
-    setBeepPattern(0x1);
   }
   
- /* if (i3c_state()) 
+  if (i3c_state()) 
     OSB_CLEAR_STATUS( OSB_Status_Red );
   else 
     OSB_SET_STATUS( OSB_Status_Red );
-  */
   
   if ( OSB_HAS_STATUS( OSB_I3C_Bl ) || 
        OSB_HAS_STATUS( OSB_I3C_Sw ) )
@@ -515,7 +523,7 @@ void checkStatusLight() {
 
 /// Timer: Manual Key
 // nach http://www.mikrocontroller.net/articles/Entprellung#Softwareentprellung
-#define DECHATTER_COUNTER 3
+#define DECHATTER_COUNTER 30
 
 uint8_t key_state;
 uint8_t key_counter;
@@ -523,7 +531,7 @@ volatile uint8_t key_press = 0;
 
 void dechatterKey() {
   // adjust manual key chatter
-  uint8_t input = PINB & (1<<PB1);
+  uint8_t input = !(PINB & (1<<PB1));
  
   if( input != key_state ) {
     key_counter--;
@@ -627,7 +635,7 @@ ISR (TIM0_OVF_vect)
   dechatterSwitches();
   checkBlockLight();
   checkStatusLight();
-  //checkI3CInt();
+  checkI3CInt();
   doBeep();
   
   // restore state
