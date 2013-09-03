@@ -32,25 +32,25 @@
  * Output Status Byte
  * ==================
  * 
- * +------------+-----------+------+---------+
- * | Status LED | Block LED | Spkr | I3C INT | 
- * | bl | r | g | bl1 | bl2 | beep | sw | bl |
- * +----+---+---+-----+-----+------+----+----+
+ * +------------+------+---------+-----------+
+ * | Status LED | Spkr | I3C INT | Block LED |
+ * | bl | r | g | beep | sw | bl | bl1 | bl2 |
+ * +----+---+---+------+----+----+-----------+
  * 
  * Status LED
  * 	bl - blink
  * 	r  - red LED
  * 	g  - green LED
- * Block Switch LED bl1bl2
- * 	00 - off
- * 	01 - slow blink
- * 	10 - fast blink
- * 	11 - on
  * Speaker
  * 	beep - Speaker active
  * I3C INT
  * 	sw - Switch array changed
  * 	bl - Block switch changed
+ * Block Switch LED bl1bl2
+ * 	00 - off
+ * 	01 - slow blink
+ * 	10 - fast blink
+ * 	11 - on
  */
 
 volatile uint8_t _output_status_byte = 0;
@@ -58,10 +58,10 @@ volatile uint8_t _output_status_byte = 0;
 #define OSB_Status_Blink 0x80
 #define OSB_Status_Red   0x40
 #define OSB_Status_Green 0x20
-#define OSB_BlSwLED      0x18
-#define OSB_Beep         0x04
-#define OSB_I3C_Sw       0x02
-#define OSB_I3C_Bl       0x01
+#define OSB_Beep         0x10
+#define OSB_I3C_Sw       0x08
+#define OSB_I3C_Bl       0x04
+#define OSB_BlSwLED      0x03  // (Bits 0 and 1)
 
 #define OSB_HAS_STATUS(st)   ((_output_status_byte & st) == st)
 #define OSB_SET_STATUS(st)   (_output_status_byte |= st)
@@ -72,10 +72,9 @@ volatile uint8_t _output_status_byte = 0;
 #define OSB_Block_Fast   0x02
 #define OSB_Block_On     0x03
 
-#define OSB_Get_Block_Status    ((_output_status_byte & OSB_BlSwLED) >> 3)
+#define OSB_Get_Block_Status     (_output_status_byte & OSB_BlSwLED)
 #define OSB_Set_Block_Status(st) (\
-	_output_status_byte = \
-	((_output_status_byte & ~(OSB_Block_On<<3)) | (st << 3)) \
+	_output_status_byte = ((_output_status_byte & ~OSB_BlSwLED) | (st & 0x03)) \
     )
 
 /*
@@ -303,7 +302,13 @@ static void twi_callback(uint8_t buffer_size,
 
     switch (cmd) {
       case (CMD_RESET): {
-	 OSB_CLEAR_STATUS( OSB_I3C_Bl + OSB_I3C_Sw );
+	if (!data) {
+	 OSB_CLEAR_STATUS( OSB_I3C_Bl );
+	 OSB_CLEAR_STATUS( OSB_I3C_Sw );
+	} else {
+	 OSB_SET_STATUS( OSB_I3C_Bl );
+	 OSB_SET_STATUS( OSB_I3C_Sw );
+	}
       }
       case (CMD_BEEP): {
 	setBeepPattern(data);
@@ -360,6 +365,7 @@ static void twi_idle_callback(void) {
   // set status bit if manual key had been pressed
   if (manualKeyPressed()) {
     OSB_SET_STATUS(OSB_I3C_Bl);
+    setBeepPattern(0x1);
   }
 
   // read switch array state and notify state changes
@@ -369,15 +375,22 @@ static void twi_idle_callback(void) {
 
     // notify the state change
     OSB_SET_STATUS(OSB_I3C_Bl);
+
+        setBeepPattern(0x1);
+
   }
   
-  if (i3c_state()) {
-    setStatusGreen();
-    resetStatusRed();
-  } else {
-    setStatusRed();
-    resetStatusGreen();
-  }
+  if (i3c_state()) 
+    OSB_SET_STATUS( OSB_Status_Red );
+  else 
+    OSB_CLEAR_STATUS( OSB_Status_Red );
+  
+  
+  if ( OSB_HAS_STATUS( OSB_I3C_Bl ) || 
+       OSB_HAS_STATUS( OSB_I3C_Sw )      )
+     OSB_CLEAR_STATUS( OSB_Status_Green );
+  else
+     OSB_SET_STATUS( OSB_Status_Green );
 
   // restore state
   SREG = _sreg;
@@ -437,7 +450,7 @@ int main(void)
 
   // blink and beep as start signal
   setBeepPattern(0x15);
-  OSB_Set_Block_Status(OSB_Block_On);
+  OSB_Set_Block_Status(OSB_Block_Fast);
   OSB_SET_STATUS( OSB_Status_Red );
   _delay_ms(500);
   OSB_SET_STATUS( OSB_Status_Green );
@@ -473,12 +486,10 @@ void checkBlockLight() {
   // blink
   if ( (OSB_Get_Block_Status == OSB_Block_Slow) || 
        (OSB_Get_Block_Status == OSB_Block_Fast) ) {
-    if (block_blink)
-      block_blink--;
 
-    if (!block_blink) {
+    if (! (block_blink--) ) {
       toggleBlockLight();
-      block_blink = (OSB_Get_Block_Status == OSB_Block_Slow) ? 3000 : 1500;
+      block_blink = (OSB_Get_Block_Status == OSB_Block_Slow) ? 3000 : 1000;
     }
   }
 }
@@ -488,10 +499,7 @@ volatile uint16_t status_blink = 0;
 void checkStatusLight() {
   // blink
   if ( OSB_HAS_STATUS(OSB_Status_Blink) ) {
-    if (status_blink)
-      status_blink--;
-
-    if (!status_blink) {
+    if (! (status_blink--) ) {
       toggleStatus();
       status_blink = 3000;      
     }
@@ -584,7 +592,7 @@ void doBeep() {
 
     if (!beep_delay) {
       // next sound from beep pattern
-      if (BEEP_PATTERN_ACTIVE)
+      if (BEEP_PATTERN_BEEP)
 	OSB_SET_STATUS(OSB_Beep);
       else
 	OSB_CLEAR_STATUS(OSB_Beep);
@@ -603,7 +611,9 @@ void doBeep() {
 
 /// Timer: I3C Interrupt
 void checkI3CInt() {
-  if (OSB_HAS_STATUS( (OSB_I3C_Bl + OSB_I3C_Sw) ))
+  if ( OSB_HAS_STATUS( OSB_I3C_Bl ) || 
+       OSB_HAS_STATUS( OSB_I3C_Sw )
+  )
     i3c_stateChange();
   else
     i3c_tristate();
