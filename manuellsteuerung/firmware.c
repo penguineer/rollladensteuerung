@@ -302,13 +302,11 @@ static void twi_callback(uint8_t buffer_size,
 
     switch (cmd) {
       case (CMD_RESET): {
-	if (!data) {
-	 OSB_CLEAR_STATUS( OSB_I3C_Bl );
-	 OSB_CLEAR_STATUS( OSB_I3C_Sw );
-	} else {
-	 OSB_SET_STATUS( OSB_I3C_Bl );
-	}
-      }
+	 if (data)
+	   OSB_SET_STATUS( OSB_Status_Red );
+	 else
+	   OSB_CLEAR_STATUS( OSB_Status_Red );
+      }; break;
       case (CMD_BEEP): {
 	setBeepPattern(data);
       }; break;
@@ -345,8 +343,8 @@ static void twi_callback(uint8_t buffer_size,
       }; break;
     }
 
-    * output_buffer_length = 1;
-    output_buffer[0] = output;
+  //  * output_buffer_length = 1;
+  //  output_buffer[0] = output;
   }
   
 }
@@ -377,11 +375,11 @@ static void twi_idle_callback(void) {
     setBeepPattern(0x1);
   }
   
-  if (i3c_state()) 
+ /* if (i3c_state()) 
     OSB_CLEAR_STATUS( OSB_Status_Red );
   else 
     OSB_SET_STATUS( OSB_Status_Red );
-  
+  */
   
   if ( OSB_HAS_STATUS( OSB_I3C_Bl ) || 
        OSB_HAS_STATUS( OSB_I3C_Sw ) )
@@ -629,7 +627,7 @@ ISR (TIM0_OVF_vect)
   dechatterSwitches();
   checkBlockLight();
   checkStatusLight();
-  checkI3CInt();
+  //checkI3CInt();
   doBeep();
   
   // restore state
