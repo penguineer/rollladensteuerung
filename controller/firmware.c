@@ -82,7 +82,7 @@ void change_switch (volatile char* o, char idx, char state) {
     }
     case SWITCH_DOWN: {
       d |= ADDRS[idx*2+1];
-      // no break – DOWN switch applies, too.
+      // no break – UP switch applies, too.
     }
     case SWITCH_UP: {
       d |= ADDRS[idx*2];
@@ -119,7 +119,7 @@ inline uint8_t i3c_state() {
 /*
  * I²C Datenformat:
  * 
- * CCCCDDDD
+ * CCCCDDDP
  * 
  * command (CCCC)
  *  All Stop  0x00   Alles anhalten
@@ -129,8 +129,10 @@ inline uint8_t i3c_state() {
  *      Open  0x04   Rollladen komplett hochfahren
  *      Close 0x05   Rollladen komplett herunterfahren
  * 
- * data (DDDD)
+ * data (DDD)
  * 	Rollladen als Bit-Maske
+ * parity (P)
+ * 	Parität über die ersten 7 Bits
  */
 #define CMD_ALL_STOP  0x0
 #define CMD_STOP      0x1
@@ -147,7 +149,21 @@ static void twi_callback(uint8_t buffer_size,
 
   if (input_buffer_length) {
     const char cmd  = (input_buffer[0] & 0xF0) >> 4;
-    const char data = input_buffer[0] & 0x0F;
+    const char data = (input_buffer[0] & 0x0E) >> 1;
+    const char parity = input_buffer[0] & 0x01;
+    
+    // check parity
+    char p = input_buffer[0] & 0xFE;
+    p ^= p >> 4;
+    p ^= p >> 2;
+    p ^= p >> 1;
+    p &= 0x01;
+    
+    if (p != parity) {
+      *output_buffer_length = 1;
+      output_buffer[0] = 0xFF;
+      return;
+    }
     
     switch (cmd) {
       case CMD_ALL_STOP: {
@@ -169,6 +185,11 @@ static void twi_callback(uint8_t buffer_size,
     }
     set_output(G_output);   
   }
+  
+        
+        
+  *output_buffer_length = 1;
+  output_buffer[0] = G_output;
 }
 
 
