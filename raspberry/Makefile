@@ -4,7 +4,7 @@
 all: shuttercontrol
 
 clean:
-	rm *.o *.elf 
+	rm *.o
 
 build: shuttercontrol.o
 	gcc -o shuttercontrol \
