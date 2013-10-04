@@ -57,7 +57,7 @@ void I2C_init(void) {
 
 int I2C_command(const int fd, const char command, const char data) {
   // check parameter range
-  if ((command < 0) || (command > 0x0f))
+  if ((command < 0) || (command > 0x07))
     return I2C_ERR_INVALIDARGUMENT;
   if ((data < 0) || (data > 0x0f))
     return I2C_ERR_INVALIDARGUMENT;
@@ -68,7 +68,17 @@ int I2C_command(const int fd, const char command, const char data) {
   // build the I2C data byte
   // arguments have been checked, 
   // this cannot be negative or more than 8 bits
-  const char send = (command << 4) + data; 
+  unsigned char send = (command << 4) + data; 
+  
+  // calculate the parity
+  char v = send;
+  char c;
+  for (c = 0; v; c++) 
+    v &= v-1;
+  c &= 1;
+
+  // set parity bit  
+  send += (c << 7);
   
   union I2C_result result;
   result.r = 0;
@@ -76,18 +86,20 @@ int I2C_command(const int fd, const char command, const char data) {
   // maximal number of tries
   int hops=20;
 
-  while (!result.c[0] && hops--) {
+  // try for hops times until the result is not zero
+  while (!result.c[0] && --hops) {
     // send command
     result.r = wiringPiI2CReadReg16(fd, send);
 
     // check for transmission errors: 2nd byte is inverted 1st byte
     const unsigned char c = ~result.c[0];
-//    printf("Transmission result: %u - %u (%u)\n", result.c[0], result.c[1], c);
-    if (result.c[1] != c) {
-//      printf("Transmission error!\n");
+    if (result.c[1] != c) 
+      // if no match, reset the result
       result.r = 0;
-    }
   }
+  
+  if (!hops)
+    printf("Giving up transmission!\n");
   
   return result.c[0];
 }
@@ -203,8 +215,9 @@ int main(int argc, char *argv[]) {
     
   int run=1;
   int idx;
+  int i=0;
   while(run) {
-    printf("******\n");
+    printf("****** %u\n", i++);
     for (idx=1; idx<5; idx++) {
       char sw = read_switch_state(idx);
       printf("Switch %d status: %d\n", idx, sw);
@@ -214,9 +227,10 @@ int main(int argc, char *argv[]) {
   //      case SWITCH_UP: set_shutter_state(idx, SHUTTER_UP); break;
   //      case SWITCH_DOWN: set_shutter_state(idx, SHUTTER_DOWN); break;
   //    }
+    //sleep(1);
     }
 
-  //  I3C_reset_manual();
+    I3C_reset_manual();
     if (sleep(1)) 
       break;
   }
