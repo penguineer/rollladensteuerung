@@ -103,17 +103,35 @@ void beep(char pattern) {
   I2C_command(I2C_FD_MANUAL, 0x1, pattern&0xf);
 }
 
+
+#define LED_PATTERN_OFF  0x00
+#define LED_PATTERN_SLOW 0x01
+#define LED_PATTERN_FAST 0x02
+#define LED_PATTERN_ON   0x03
+
+void set_manual_mode_led(const char pattern) {
+  I2C_command(I2C_FD_MANUAL, 0x2, pattern);
+}
+
 int main(int argc, char *argv[]) {
   I2C_init();
+  
+  set_manual_mode_led(LED_PATTERN_OFF);
     
   int run=1;
   while(run) {
     char sw = read_switch_state(0x1);
     printf("Switch status: %d\n", sw);
     I3C_reset();
+    
+    switch (sw) {
+      case SWITCH_NEUTRAL: set_manual_mode_led(LED_PATTERN_ON); break;
+      case SWITCH_UP: set_manual_mode_led(LED_PATTERN_SLOW); break;
+      case SWITCH_DOWN: set_manual_mode_led(LED_PATTERN_FAST); break;
+    }
 
     if (sleep(1)) 
-      exit(1);
+      break;
       
 //    wiringPiI2CWrite(I2C_FD_MANUEL, 0x20+(sw&0x0f));
   }
