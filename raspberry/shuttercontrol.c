@@ -135,9 +135,15 @@ void set_manual_mode_led(const char pattern) {
 #define SHUTTER_UP   1
 #define SHUTTER_DOWN 2
 
+/**
+  * Set the shutter control state.
+  * @param idx Number of the shutter, between 1 and 4
+  * @param state One of SHUTTER_XXX.
+  * @return 0 if everything is okay, otherwise one of SHUTTER_ERR_XXX
+  */
 char set_shutter_state(const char idx, const char state) {
   // check parameter range
-  if ((idx < 1) || (idx > 3))
+  if ((idx < 1) || (idx > 4))
     return SHUTTER_ERR_OUTOFBOUNDS;
   if ((state < 0) || (state > 2))
     return SHUTTER_ERR_OUTOFBOUNDS;  
@@ -162,6 +168,9 @@ char set_shutter_state(const char idx, const char state) {
   return 0;
 }
 
+/**
+  * Stop all the shutters!
+  */
 void stop_all_shutters() {
   I2C_command(I2C_FD_CONTROLLER, 0x0, 0x0);
 }
@@ -173,20 +182,26 @@ int main(int argc, char *argv[]) {
   set_manual_mode_led(LED_PATTERN_OFF);
     
   int run=1;
+  int idx;
   while(run) {
-    char sw = read_switch_state(0x1);
-    printf("Switch status: %d\n", sw);
-    I3C_reset_manual();
-    
-    switch (sw) {
-      case SWITCH_NEUTRAL: set_shutter_state(0x1, SHUTTER_OFF); break;
-      case SWITCH_UP: set_shutter_state(0x1, SHUTTER_UP); break;
-      case SWITCH_DOWN: set_shutter_state(0x1, SHUTTER_DOWN); break;
+    printf("******\n");
+    for (idx=1; idx<5; idx++) {
+      char sw = read_switch_state(idx);
+      printf("Switch %d status: %d\n", idx, sw);
+      
+      switch (sw) {
+        case SWITCH_NEUTRAL: set_shutter_state(idx, SHUTTER_OFF); break;
+        case SWITCH_UP: set_shutter_state(idx, SHUTTER_UP); break;
+        case SWITCH_DOWN: set_shutter_state(idx, SHUTTER_DOWN); break;
+      }
     }
 
+    I3C_reset_manual();
     if (sleep(1)) 
       break;
   }
-  
+
+  stop_all_shutters;
+    
   return 0;
 }
