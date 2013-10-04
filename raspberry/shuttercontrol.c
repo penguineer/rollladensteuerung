@@ -49,6 +49,12 @@ void I2C_init(void) {
 
 #define I2C_ERR_INVALIDARGUMENT -2
 
+  union I2C_result {
+    unsigned char c[2];
+    unsigned short r;
+  };
+
+
 int I2C_command(const int fd, const char command, const char data) {
   // check parameter range
   if ((command < 0) || (command > 0x0f))
@@ -64,12 +70,26 @@ int I2C_command(const int fd, const char command, const char data) {
   // this cannot be negative or more than 8 bits
   const char send = (command << 4) + data; 
   
-  // send command
-  const char result = wiringPiI2CReadReg8(fd, send);
+  union I2C_result result;
+  result.r = 0;
 
-  // TODO check for transmission errors
+  // maximal number of tries
+  int hops=20;
+
+  while (!result.c[0] && hops--) {
+    // send command
+    result.r = wiringPiI2CReadReg16(fd, send);
+
+    // check for transmission errors: 2nd byte is inverted 1st byte
+    const unsigned char c = ~result.c[0];
+//    printf("Transmission result: %u - %u (%u)\n", result.c[0], result.c[1], c);
+    if (result.c[1] != c) {
+//      printf("Transmission error!\n");
+      result.r = 0;
+    }
+  }
   
-  return result;
+  return result.c[0];
 }
 
 ///// I3C stuff /////
@@ -95,7 +115,7 @@ void I3C_reset_manual() {
   */
 char read_switch_state(const char idx) {
   // check parameter range
-  if ((idx < 1) || (idx > 3))
+  if ((idx < 1) || (idx > 4))
     return SWITCH_ERR_OUTOFBOUNDS;
 
   // send the command    
@@ -189,14 +209,14 @@ int main(int argc, char *argv[]) {
       char sw = read_switch_state(idx);
       printf("Switch %d status: %d\n", idx, sw);
       
-      switch (sw) {
-        case SWITCH_NEUTRAL: set_shutter_state(idx, SHUTTER_OFF); break;
-        case SWITCH_UP: set_shutter_state(idx, SHUTTER_UP); break;
-        case SWITCH_DOWN: set_shutter_state(idx, SHUTTER_DOWN); break;
-      }
+  //    switch (sw) {
+  //      case SWITCH_NEUTRAL: set_shutter_state(idx, SHUTTER_OFF); break;
+  //      case SWITCH_UP: set_shutter_state(idx, SHUTTER_UP); break;
+  //      case SWITCH_DOWN: set_shutter_state(idx, SHUTTER_DOWN); break;
+  //    }
     }
 
-    I3C_reset_manual();
+  //  I3C_reset_manual();
     if (sleep(1)) 
       break;
   }
