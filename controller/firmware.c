@@ -149,8 +149,8 @@ static void twi_callback(uint8_t buffer_size,
 
   if (input_buffer_length) {
     const char cmd  = (input_buffer[0] & 0xF0) >> 4;
-    const char data = (input_buffer[0] & 0x0E) >> 1;
-    const char parity = input_buffer[0] & 0x01;
+    const char data = (input_buffer[0] & 0x0F);
+  /*  const char parity = input_buffer[0] & 0x01;
     
     // check parity
     char p = input_buffer[0] & 0xFE;
@@ -164,7 +164,7 @@ static void twi_callback(uint8_t buffer_size,
       output_buffer[0] = 0xFF;
       return;
     }
-    
+    */
     switch (cmd) {
       case CMD_ALL_STOP: {
 	G_output = 0;
