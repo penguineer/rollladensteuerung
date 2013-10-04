@@ -8,7 +8,7 @@
 #include <wiringPiI2C.h>
 
 #define I2C_ADDR_CONTROLLER 0x20
-#define I2C_ADDR_MANUEL     0x22
+#define I2C_ADDR_MANUAL     0x22
 
 ///// I2C stuff /////
 
@@ -17,11 +17,11 @@
   */
 struct I2C_descriptors {
   int controller;
-  int manuel;
+  int manual;
 } I2C_fd;
 
 #define I2C_FD_CONTROLLER (I2C_fd.controller)
-#define I2C_FD_MANUEL     (I2C_fd.manuel)
+#define I2C_FD_MANUAL     (I2C_fd.manual)
 
 /**
   * Initialize an I2C channel to the specified address. Exits with an error
@@ -44,7 +44,7 @@ int I2C_setup_fd(int addr) {
   */
 void I2C_init(void) {
   I2C_fd.controller = I2C_setup_fd(I2C_ADDR_CONTROLLER);
-  I2C_fd.manuel = I2C_setup_fd(I2C_ADDR_MANUEL);
+  I2C_fd.manual = I2C_setup_fd(I2C_ADDR_MANUAL);
 }
 
 #define I2C_ERR_INVALIDARGUMENT -2
@@ -75,7 +75,7 @@ int I2C_command(int fd, char command, char data) {
 ///// I3C stuff /////
 
 void I3C_reset() {
-  I2C_command(I2C_FD_MANUEL, 0x4, 0x0);
+  I2C_command(I2C_FD_MANUAL, 0x4, 0x0);
 }
 
 ///// Switch states /////
@@ -93,10 +93,14 @@ char read_switch_state(int idx) {
     return SWITCH_ERR_OUTOFBOUNDS;
 
   // send the command    
-  const char state = I2C_command(I2C_FD_MANUEL, 0x3, idx);
+  const char state = I2C_command(I2C_FD_MANUAL, 0x3, idx);
   
   // return result
   return state;  
+}
+
+void beep(char pattern) {
+  I2C_command(I2C_FD_MANUAL, 0x1, pattern&0xf);
 }
 
 int main(int argc, char *argv[]) {
