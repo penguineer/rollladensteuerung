@@ -296,11 +296,23 @@ static void twi_callback(uint8_t buffer_size,
                          volatile uint8_t *output_buffer) {
 
   if (input_buffer_length) {
-    const char cmd  = (input_buffer[0] & 0xF0) >> 4;
+    const char parity = (input_buffer[0] & 0x80) >> 7;
+    const char cmd  = (input_buffer[0] & 0x70) >> 4;
     const char data = input_buffer[0] & 0x0F;
     
+    // check parity
+    char v = input_buffer[0] & 0x7F;
+    char c;
+    for (c = 0; v; c++)
+      v &= v-1;
+    c &= 1;
+    
+    
+    // some dummy output value, as 0 states an error
     uint8_t output=0;
 
+    // only check if parity matches
+    if (parity == c)
     switch (cmd) {
       case (CMD_I3C): {
 	 if (data)
@@ -309,12 +321,15 @@ static void twi_callback(uint8_t buffer_size,
 	   OSB_CLEAR_STATUS( OSB_I3C_Bl );
 	   OSB_CLEAR_STATUS( OSB_I3C_Sw );
 	 }
+	output = 1;
       }; break;
       case (CMD_BEEP): {
 	setBeepPattern(data);
+	output = 1;
       }; break;
       case (CMD_MANUAL_MODE): {
 	OSB_Set_Block_Status(data);
+	output = 1;
       }; break;
       case (CMD_GET_SWITCH): {
 	 output = 0;
@@ -354,8 +369,9 @@ static void twi_callback(uint8_t buffer_size,
       }; break;
     }
 
-    * output_buffer_length = 1;
+    * output_buffer_length = 2;
     output_buffer[0] = output;
+    output_buffer[1] = ~(output);
   }
   
 }
@@ -452,7 +468,7 @@ int main(void)
   _delay_ms(1);
 
   // blink and beep as start signal
-  setBeepPattern(0x15);
+  //setBeepPattern(0x15);
   OSB_Set_Block_Status(OSB_Block_Fast);
   OSB_SET_STATUS( OSB_Status_Red );
   _delay_ms(500);
