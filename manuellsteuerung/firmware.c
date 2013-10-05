@@ -288,6 +288,7 @@ inline uint8_t i3c_state() {
 #define CMD_MANUAL_MODE 0x02
 #define CMD_GET_SWITCH  0x03
 #define CMD_I3C         0x04
+#define CMD_MANUAL_SW   0x05
 
 static void twi_callback(uint8_t buffer_size,
                          volatile uint8_t input_buffer_length, 
@@ -331,6 +332,13 @@ static void twi_callback(uint8_t buffer_size,
 	OSB_Set_Block_Status(data);
 	output = 1;
       }; break;
+      case (CMD_MANUAL_SW): {
+	output = BSS_HAS_STATUS(BSS_BlockSwitch) ? 1 : 2;
+	if (data == 1)
+	  BSS_CLEAR_STATUS(BSS_BlockSwitch);
+	else if (data == 2)
+	  BSS_SET_STATUS(BSS_BlockSwitch);
+      }; break;
       case (CMD_GET_SWITCH): {
 	 output = 0;
 	 const uint8_t sw = _switch_array_status;
@@ -369,7 +377,7 @@ static void twi_callback(uint8_t buffer_size,
       }; break;
     }
 
-    * output_buffer_length = 2;
+    *output_buffer_length = 2;
     output_buffer[0] = output;
     output_buffer[1] = ~(output);
   }
@@ -389,6 +397,10 @@ static void twi_idle_callback(void) {
   // set status bit if manual key had been pressed
   if (manualKeyPressed()) {
     OSB_SET_STATUS(OSB_I3C_Bl);
+    if (BSS_HAS_STATUS(BSS_BlockSwitch))
+      BSS_CLEAR_STATUS(BSS_BlockSwitch);
+    else
+      BSS_SET_STATUS(BSS_BlockSwitch);
   }
 
   // read switch array state and notify state changes
