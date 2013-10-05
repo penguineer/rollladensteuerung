@@ -288,6 +288,7 @@ inline uint8_t i3c_state() {
 #define CMD_MANUAL_MODE 0x02
 #define CMD_GET_SWITCH  0x03
 #define CMD_I3C         0x04
+#define CMD_MANUAL_SW   0x05
 
 static void twi_callback(uint8_t buffer_size,
                          volatile uint8_t input_buffer_length, 
@@ -296,11 +297,23 @@ static void twi_callback(uint8_t buffer_size,
                          volatile uint8_t *output_buffer) {
 
   if (input_buffer_length) {
-    const char cmd  = (input_buffer[0] & 0xF0) >> 4;
+    const char parity = (input_buffer[0] & 0x80) >> 7;
+    const char cmd  = (input_buffer[0] & 0x70) >> 4;
     const char data = input_buffer[0] & 0x0F;
     
+    // check parity
+    char v = input_buffer[0] & 0x7F;
+    char c;
+    for (c = 0; v; c++)
+      v &= v-1;
+    c &= 1;
+    
+    
+    // some dummy output value, as 0 states an error
     uint8_t output=0;
 
+    // only check if parity matches
+    if (parity == c)
     switch (cmd) {
       case (CMD_I3C): {
 	 if (data)
@@ -309,12 +322,22 @@ static void twi_callback(uint8_t buffer_size,
 	   OSB_CLEAR_STATUS( OSB_I3C_Bl );
 	   OSB_CLEAR_STATUS( OSB_I3C_Sw );
 	 }
+	output = 1;
       }; break;
       case (CMD_BEEP): {
 	setBeepPattern(data);
+	output = 1;
       }; break;
       case (CMD_MANUAL_MODE): {
 	OSB_Set_Block_Status(data);
+	output = 1;
+      }; break;
+      case (CMD_MANUAL_SW): {
+	output = BSS_HAS_STATUS(BSS_BlockSwitch) ? 1 : 2;
+	if (data == 1)
+	  BSS_CLEAR_STATUS(BSS_BlockSwitch);
+	else if (data == 2)
+	  BSS_SET_STATUS(BSS_BlockSwitch);
       }; break;
       case (CMD_GET_SWITCH): {
 	 output = 0;
@@ -328,25 +351,25 @@ static void twi_callback(uint8_t buffer_size,
 	     output = 3;
 	 }
 	 if (data == 2) {
-	   if ( (sw & 0x04) == 0x04)
+	   if ( (sw & 0x20) == 0x20)
 	     output = 1;
-	   if ( (sw & 0x02) == 0x02)
+	   else if ( (sw & 0x04) == 0x04)
 	     output = 2;
 	   else
 	     output = 3;
 	 }
 	 if (data == 3) {
-	   if ( (sw & 0x01) == 0x01)
+	   if ( (sw & 0x02) == 0x02)
 	     output = 1;
-	   if ( (sw & 0x20) == 0x20)
+	   else if ( (sw & 0x40) == 0x40)
 	     output = 2;
 	   else
 	     output = 3;
 	 }
 	 if (data == 4) {
-	   if ( (sw & 0x40) == 0x40)
+	   if ( (sw & 0x01) == 0x01)
 	     output = 1;
-	   if ( (sw & 0x80) == 0x80)
+	   else if ( (sw & 0x80) == 0x80)
 	     output = 2;
 	   else
 	     output = 3;
@@ -354,8 +377,9 @@ static void twi_callback(uint8_t buffer_size,
       }; break;
     }
 
-    * output_buffer_length = 1;
+    *output_buffer_length = 2;
     output_buffer[0] = output;
+    output_buffer[1] = ~(output);
   }
   
 }
@@ -373,6 +397,10 @@ static void twi_idle_callback(void) {
   // set status bit if manual key had been pressed
   if (manualKeyPressed()) {
     OSB_SET_STATUS(OSB_I3C_Bl);
+    if (BSS_HAS_STATUS(BSS_BlockSwitch))
+      BSS_CLEAR_STATUS(BSS_BlockSwitch);
+    else
+      BSS_SET_STATUS(BSS_BlockSwitch);
   }
 
   // read switch array state and notify state changes
