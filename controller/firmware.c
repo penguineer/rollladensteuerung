@@ -37,28 +37,36 @@ inline void resetPortB(char mask) {
 }
 
 void set_output(const char output) {
-   char data = output;
+  // store state and disable interrupts
+  const uint8_t _sreg = SREG;
+  cli();
+  
+  
+  char data = output;
    
-   char i;
-   for (i = 0; i < 9; i++) {
-     const char b = data & 0x01;
-     data = data >> 1;
+  char i;
+  for (i = 0; i < 9; i++) {
+    const char b = data & 0x01;
+    data = data >> 1;
      
-     // clear all outputs
-     resetPortB((1<<PB3) | (1<<PB4));
-     _delay_us(1);
+    // clear all outputs
+    resetPortB((1<<PB3) | (1<<PB4));
+    _delay_us(1);
      
-     // set DS
-     setPortB(b<<PB3);     
-     _delay_us(1);
+    // set DS
+    setPortB(b<<PB3);     
+    _delay_us(1);
      
-     // shift clock
-     setPortB(1<<PB4);
-     _delay_us(1);
-   }
+    // shift clock
+    setPortB(1<<PB4);
+    _delay_us(1);
+  }
 
-   // clear all outputs
-   resetPortB((1<<PB3) | (1<<PB4));
+  // clear all outputs
+  resetPortB((1<<PB3) | (1<<PB4));
+  
+  // restore state
+  SREG = _sreg;  
 }
 
 #define SWITCH_OFF 0
