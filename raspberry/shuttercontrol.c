@@ -194,7 +194,7 @@ char set_shutter_state(const char idx, const char state) {
   }
 
   // send the command    
-  I2C_command(I2C_FD_CONTROLLER, command, idx);
+  I2C_command(I2C_FD_CONTROLLER, command, idx-1);
 
   // return OK
   return 0;
@@ -222,11 +222,11 @@ int main(int argc, char *argv[]) {
       char sw = read_switch_state(idx);
       printf("Switch %d status: %d\n", idx, sw);
       
-  //    switch (sw) {
-  //      case SWITCH_NEUTRAL: set_shutter_state(idx, SHUTTER_OFF); break;
-  //      case SWITCH_UP: set_shutter_state(idx, SHUTTER_UP); break;
-  //      case SWITCH_DOWN: set_shutter_state(idx, SHUTTER_DOWN); break;
-  //    }
+      switch (sw) {
+        case SWITCH_NEUTRAL: set_shutter_state(idx, SHUTTER_OFF); break;
+        case SWITCH_UP: set_shutter_state(idx, SHUTTER_UP); break;
+        case SWITCH_DOWN: set_shutter_state(idx, SHUTTER_DOWN); break;
+      }
     //sleep(1);
     }
 
