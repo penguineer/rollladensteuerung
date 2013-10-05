@@ -158,6 +158,17 @@ void set_manual_mode_led(const char pattern) {
   I2C_command(I2C_FD_MANUAL, 0x2, pattern);
 }
 
+char get_manual_mode() {
+  return I2C_command(I2C_FD_MANUAL, 0x5, 0);
+}
+
+#define MANUAL_MODE_ON  1
+#define MANUAL_MODE_OFF 2
+
+void set_manual_mode(const char mode) {
+  I2C_command(I2C_FD_MANUAL, 0x5, mode);
+}
+
 ///// Shutter Control unit /////
 
 #define SHUTTER_ERR             -1
@@ -211,13 +222,19 @@ void stop_all_shutters() {
 int main(int argc, char *argv[]) {
   I2C_init();
   
-  set_manual_mode_led(LED_PATTERN_OFF);
-    
   int run=1;
   int idx;
   int i=0;
   while(run) {
     printf("****** %u\n", i++);
+
+    const char manual = get_manual_mode();
+    printf("Manual mode: %s\n", (manual==1)?"on":"off");
+    if (manual == MANUAL_MODE_ON)
+      set_manual_mode_led(LED_PATTERN_ON);
+    else
+      set_manual_mode_led(LED_PATTERN_OFF);
+    
     for (idx=1; idx<5; idx++) {
       char sw = read_switch_state(idx);
       printf("Switch %d status: %d\n", idx, sw);
