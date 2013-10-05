@@ -343,25 +343,25 @@ static void twi_callback(uint8_t buffer_size,
 	     output = 3;
 	 }
 	 if (data == 2) {
-	   if ( (sw & 0x04) == 0x04)
+	   if ( (sw & 0x20) == 0x20)
 	     output = 1;
-	   if ( (sw & 0x02) == 0x02)
+	   else if ( (sw & 0x04) == 0x04)
 	     output = 2;
 	   else
 	     output = 3;
 	 }
 	 if (data == 3) {
-	   if ( (sw & 0x01) == 0x01)
+	   if ( (sw & 0x02) == 0x02)
 	     output = 1;
-	   if ( (sw & 0x20) == 0x20)
+	   else if ( (sw & 0x40) == 0x40)
 	     output = 2;
 	   else
 	     output = 3;
 	 }
 	 if (data == 4) {
-	   if ( (sw & 0x40) == 0x40)
+	   if ( (sw & 0x01) == 0x01)
 	     output = 1;
-	   if ( (sw & 0x80) == 0x80)
+	   else if ( (sw & 0x80) == 0x80)
 	     output = 2;
 	   else
 	     output = 3;
@@ -468,7 +468,7 @@ int main(void)
   _delay_ms(1);
 
   // blink and beep as start signal
-  //setBeepPattern(0x15);
+  setBeepPattern(0x15);
   OSB_Set_Block_Status(OSB_Block_Fast);
   OSB_SET_STATUS( OSB_Status_Red );
   _delay_ms(500);

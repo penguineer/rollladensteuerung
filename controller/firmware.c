@@ -148,48 +148,53 @@ static void twi_callback(uint8_t buffer_size,
                          volatile uint8_t *output_buffer) {
 
   if (input_buffer_length) {
-    const char cmd  = (input_buffer[0] & 0xF0) >> 4;
-    const char data = (input_buffer[0] & 0x0F);
-  /*  const char parity = input_buffer[0] & 0x01;
+    const char parity = (input_buffer[0] & 0x80) >> 7;
+    const char cmd  = (input_buffer[0] & 0x70) >> 4;
+    const char data = input_buffer[0] & 0x0F;
     
     // check parity
-    char p = input_buffer[0] & 0xFE;
-    p ^= p >> 4;
-    p ^= p >> 2;
-    p ^= p >> 1;
-    p &= 0x01;
+    char v = input_buffer[0] & 0x7F;
+    char c;
+    for (c = 0; v; c++)
+      v &= v-1;
+    c &= 1;
     
-    if (p != parity) {
-      *output_buffer_length = 1;
-      output_buffer[0] = 0xFF;
-      return;
+    
+    // some dummy output value, as 0 states an error
+    uint8_t output=0;
+
+    // only check if parity matches
+    if (parity == c) {
+      char old = G_output;
+      switch (cmd) {
+	case CMD_ALL_STOP: {
+	  G_output = 0;
+	  break;
+	}
+	case CMD_STOP: {
+	  change_switch(&G_output, data, SWITCH_OFF);
+	  break;
+	}
+	case CMD_UP: {
+	  change_switch(&G_output, data, SWITCH_UP);
+	  break;
+	}
+	case CMD_DOWN: {
+	  change_switch(&G_output, data, SWITCH_DOWN);
+	  break;
+	}
+      }
+      // only set if changed
+      if (old != G_output)
+	set_output(G_output);
+      
+      output = 1;
     }
-    */
-    switch (cmd) {
-      case CMD_ALL_STOP: {
-	G_output = 0;
-	break;
-      }
-      case CMD_STOP: {
-	change_switch(&G_output, data, SWITCH_OFF);
-	break;
-      }
-      case CMD_UP: {
-        change_switch(&G_output, data, SWITCH_UP);
-	break;
-      }
-      case CMD_DOWN: {
-        change_switch(&G_output, data, SWITCH_DOWN);
-	break;
-      }
-    }
-    set_output(G_output);   
+    
+    *output_buffer_length = 2;
+    output_buffer[0] = output;
+    output_buffer[1] = ~(output);
   }
-  
-        
-        
-  *output_buffer_length = 1;
-  output_buffer[0] = G_output;
 }
 
 
