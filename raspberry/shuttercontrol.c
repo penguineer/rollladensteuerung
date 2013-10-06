@@ -219,11 +219,53 @@ void stop_all_shutters() {
 }
 
 
+char switch_state[4];
+
+/**
+  * Set stored switch states to NEUTRAL.
+  */
+void clear_stored_switch_state() {
+  int i;
+  for (i=0; i < 4; i++) {
+    switch_state[i] = SWITCH_NEUTRAL;
+  }
+}
+
+/**
+  * Store a new switch state.
+  * Return old state if there was a change.
+  * @return the old state or 0 if there was no change
+  */
+char store_switch_state(const char idx, const char state) {
+  const char old_state = switch_state[idx-1];
+  
+  if (old_state == state)
+    return 0;
+    
+  switch_state[idx-1] = state;
+  return old_state;
+}
+
+/**
+  * Adjust the switch state in state storage and controller,
+  * but only if there was a change.
+  */
+void adjust_switch_state(const char idx, const char state) {
+  if (store_switch_state)
+    // commit the action only if the state has changed.
+    switch (state) {
+      case SWITCH_NEUTRAL: set_shutter_state(idx, SHUTTER_OFF); break;
+      case SWITCH_UP: set_shutter_state(idx, SHUTTER_UP); break;
+      case SWITCH_DOWN: set_shutter_state(idx, SHUTTER_DOWN); break;
+    }
+}
+
 int main(int argc, char *argv[]) {
   I2C_init();
+  stop_all_shutters();
+  clear_stored_switch_state();
   
-  int run=1;
-  int idx;
+  char run=1;
   int i=0;
   while(run) {
     printf("****** %u\n", i++);
@@ -235,16 +277,12 @@ int main(int argc, char *argv[]) {
     else
       set_manual_mode_led(LED_PATTERN_OFF);
     
+    int idx;
     for (idx=1; idx<5; idx++) {
-      char sw = read_switch_state(idx);
+      const char sw = read_switch_state(idx);
       printf("Switch %d status: %d\n", idx, sw);
-      
-      switch (sw) {
-        case SWITCH_NEUTRAL: set_shutter_state(idx, SHUTTER_OFF); break;
-        case SWITCH_UP: set_shutter_state(idx, SHUTTER_UP); break;
-        case SWITCH_DOWN: set_shutter_state(idx, SHUTTER_DOWN); break;
-      }
-    //sleep(1);
+
+      adjust_switch_state(idx, sw);      
     }
 
     I3C_reset_manual();
@@ -252,7 +290,7 @@ int main(int argc, char *argv[]) {
       break;
   }
 
-  stop_all_shutters;
+  stop_all_shutters();
     
   return 0;
 }
