@@ -359,9 +359,9 @@ static void twi_callback(uint8_t buffer_size,
 	     output = 3;
 	 }
 	 if (data == 3) {
-	   if ( (sw & 0x02) == 0x02)
+	   if ( (sw & 0x40) == 0x40)
 	     output = 1;
-	   else if ( (sw & 0x40) == 0x40)
+	   else if ( (sw & 0x02) == 0x02)
 	     output = 2;
 	   else
 	     output = 3;
