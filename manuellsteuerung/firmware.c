@@ -551,7 +551,7 @@ void checkStatusLight() {
 
 /// Timer: Manual Key
 // nach http://www.mikrocontroller.net/articles/Entprellung#Softwareentprellung
-#define DECHATTER_COUNTER 30
+#define DECHATTER_COUNTER 50
 
 uint8_t key_state;
 uint8_t key_counter;
