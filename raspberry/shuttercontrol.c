@@ -251,13 +251,16 @@ char store_switch_state(const char idx, const char state) {
   * but only if there was a change.
   */
 void adjust_switch_state(const char idx, const char state) {
-  if (store_switch_state)
+  if (store_switch_state(idx, state)) {
+    printf("Changing switch state for %d to %d.\n", idx, state);
+    
     // commit the action only if the state has changed.
     switch (state) {
       case SWITCH_NEUTRAL: set_shutter_state(idx, SHUTTER_OFF); break;
       case SWITCH_UP: set_shutter_state(idx, SHUTTER_UP); break;
       case SWITCH_DOWN: set_shutter_state(idx, SHUTTER_DOWN); break;
     }
+  }
 }
 
 int main(int argc, char *argv[]) {
