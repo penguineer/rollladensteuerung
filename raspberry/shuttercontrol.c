@@ -267,6 +267,10 @@ int main(int argc, char *argv[]) {
   I2C_init();
   stop_all_shutters();
   clear_stored_switch_state();
+  beep(0x05);
+  set_manual_mode_led(LED_PATTERN_FAST);
+  sleep(1);
+  set_manual_mode_led(LED_PATTERN_OFF);
   
   char run=1;
   int i=0;
