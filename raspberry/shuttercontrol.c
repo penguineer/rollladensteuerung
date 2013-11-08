@@ -1,8 +1,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
-
 #include <unistd.h>
+
+#include <sys/time.h>
 
 #include <wiringPi.h>
 #include <wiringPiI2C.h>
@@ -261,6 +262,15 @@ void adjust_switch_state(const char idx, const char state) {
       case SWITCH_DOWN: set_shutter_state(idx, SHUTTER_DOWN); break;
     }
   }
+}
+
+/**
+ * Get the milliseconds since epoch.
+ */
+long time_millis() {
+  struct timeval te;
+  gettimeofday(&te, NULL);
+  return te.tv_sec + (te.tv_usec/1000);
 }
 
 int main(int argc, char *argv[]) {
