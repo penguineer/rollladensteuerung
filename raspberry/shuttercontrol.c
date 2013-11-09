@@ -1,14 +1,25 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
-
 #include <unistd.h>
+
+#include <time.h>
 
 #include <wiringPi.h>
 #include <wiringPiI2C.h>
 
 #define I2C_ADDR_CONTROLLER 0x21
 #define I2C_ADDR_MANUAL     0x22
+
+/**
+ * Get the milliseconds since epoch.
+ */
+long current_millis() {
+  struct timeval tv;
+  gettimeofday(&tv, 0);
+  
+  return tv.tv_sec*1000L + tv.tv_usec/1000L;
+}
 
 ///// I2C stuff /////
 
@@ -115,6 +126,7 @@ void I3C_reset_manual() {
 #define SWITCH_UP      1
 #define SWITCH_NEUTRAL 3
 #define SWITCH_DOWN    2
+#define SWITCH_LOCKED  0
 
 #define SWITCH_ERR             -1
 #define SWITCH_ERR_OUTOFBOUNDS -2
@@ -220,14 +232,17 @@ void stop_all_shutters() {
 
 
 char switch_state[4];
+long switch_lastchange[4];
 
 /**
   * Set stored switch states to NEUTRAL.
   */
 void clear_stored_switch_state() {
+  const long t = current_millis();
   int i;
   for (i=0; i < 4; i++) {
     switch_state[i] = SWITCH_NEUTRAL;
+    switch_lastchange[i] = t;
   }
 }
 
@@ -241,6 +256,8 @@ char store_switch_state(const char idx, const char state) {
   
   if (old_state == state)
     return 0;
+
+  switch_lastchange[idx-1] = current_millis();  
     
   switch_state[idx-1] = state;
   return old_state;
@@ -251,17 +268,53 @@ char store_switch_state(const char idx, const char state) {
   * but only if there was a change.
   */
 void adjust_switch_state(const char idx, const char state) {
-  if (store_switch_state(idx, state)) {
-    printf("Changing switch state for %d to %d.\n", idx, state);
-    
-    // commit the action only if the state has changed.
-    switch (state) {
-      case SWITCH_NEUTRAL: set_shutter_state(idx, SHUTTER_OFF); break;
-      case SWITCH_UP: set_shutter_state(idx, SHUTTER_UP); break;
-      case SWITCH_DOWN: set_shutter_state(idx, SHUTTER_DOWN); break;
+  // time since last change
+  const long delay = 2*1000;
+  const long rundelay = 60*1000;
+  const long lastchange = current_millis() - switch_lastchange[idx-1];
+
+  // only if rundelay not exceeded; 
+  // after a while the shutter will be unlocked no matter what
+  if (lastchange < rundelay) {
+  
+    // ignore neutral position for locked switches
+    if ((state == SWITCH_NEUTRAL) &&
+        (lastchange > delay))
+        return;
+
+    // lock switch if it is hold for longer than 2 secs
+    if ((state != SWITCH_NEUTRAL) &&
+        (switch_state[idx-1] == state) &&
+        (lastchange > delay)) {
+        printf("Locking %d.\n", idx);
+        beep(0x1);
+        return;
     }
+
+  }
+            
+  // store new state and check if a change occured
+  const char st = store_switch_state(idx, state);
+
+  if (st) {
+    // if locked, just turn off
+    if (lastchange > delay) {
+      printf("Shutting %d off.\n", idx);
+      set_shutter_state(idx, SHUTTER_OFF);
+      store_switch_state(idx, SWITCH_NEUTRAL);
+    } else {
+      printf("Changing switch state for %d to %d.\n", idx, state);
+    
+      // commit the action only if the state has changed.
+      switch (state) {
+        case SWITCH_NEUTRAL: set_shutter_state(idx, SHUTTER_OFF); break;
+        case SWITCH_UP: set_shutter_state(idx, SHUTTER_UP); break;
+        case SWITCH_DOWN: set_shutter_state(idx, SHUTTER_DOWN); break;
+      }
+    } // if-else  
   }
 }
+
 
 int main(int argc, char *argv[]) {
   I2C_init();
