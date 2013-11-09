@@ -3,13 +3,28 @@
 #include <errno.h>
 #include <unistd.h>
 
-#include <sys/time.h>
+#include <time.h>
 
 #include <wiringPi.h>
 #include <wiringPiI2C.h>
 
 #define I2C_ADDR_CONTROLLER 0x21
 #define I2C_ADDR_MANUAL     0x22
+
+/**
+ * Get the milliseconds since epoch.
+ */
+long current_millis() {
+/*  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  
+  return ts.tv_nsec/10000;*/
+  
+  struct timeval tv;
+  gettimeofday(&tv, 0);
+  
+  return tv.tv_sec*1000L + tv.tv_usec/1000L;
+}
 
 ///// I2C stuff /////
 
@@ -221,14 +236,17 @@ void stop_all_shutters() {
 
 
 char switch_state[4];
+long switch_lastchange[4];
 
 /**
   * Set stored switch states to NEUTRAL.
   */
 void clear_stored_switch_state() {
+  const long t = current_millis();
   int i;
   for (i=0; i < 4; i++) {
     switch_state[i] = SWITCH_NEUTRAL;
+    switch_lastchange[i] = t;
   }
 }
 
@@ -240,8 +258,15 @@ void clear_stored_switch_state() {
 char store_switch_state(const char idx, const char state) {
   const char old_state = switch_state[idx-1];
   
+  
+  if (idx == 2 && (current_millis() - switch_lastchange[idx-1] > 5000))
+   beep(0x1);
+
   if (old_state == state)
     return 0;
+
+    
+  switch_lastchange[idx-1] = current_millis();  
     
   switch_state[idx-1] = state;
   return old_state;
@@ -264,20 +289,12 @@ void adjust_switch_state(const char idx, const char state) {
   }
 }
 
-/**
- * Get the milliseconds since epoch.
- */
-long time_millis() {
-  struct timeval te;
-  gettimeofday(&te, NULL);
-  return te.tv_sec + (te.tv_usec/1000);
-}
 
 int main(int argc, char *argv[]) {
   I2C_init();
   stop_all_shutters();
   clear_stored_switch_state();
-  beep(0x05);
+//  beep(0x05);
   set_manual_mode_led(LED_PATTERN_FAST);
   sleep(1);
   set_manual_mode_led(LED_PATTERN_OFF);
