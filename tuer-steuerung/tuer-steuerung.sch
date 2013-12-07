@@ -185,6 +185,27 @@ In this library the device names are the same as the pin names of the symbols, t
 <wire x1="3.048" y1="-4.318" x2="-3.048" y2="-4.318" width="0.127" layer="21"/>
 <wire x1="-3.048" y1="-4.318" x2="-3.048" y2="4.318" width="0.127" layer="21"/>
 </package>
+<package name="RIACON_101_2">
+<description>&lt;b&gt;RIACON AKL Typ 101&lt;/b&gt;
+
+Rastermaß 5,08 mm</description>
+<pad name="1" x="-2.54" y="0" drill="1.3" shape="octagon"/>
+<pad name="2" x="2.54" y="0" drill="1.3" shape="octagon"/>
+<wire x1="-5.08" y1="4.19" x2="5.08" y2="4.19" width="0.2032" layer="21"/>
+<wire x1="5.08" y1="4.19" x2="5.08" y2="2.54" width="0.2032" layer="21"/>
+<wire x1="5.08" y1="2.54" x2="5.08" y2="-2.54" width="0.2032" layer="21"/>
+<wire x1="5.08" y1="-2.54" x2="5.08" y2="-3.81" width="0.2032" layer="21"/>
+<wire x1="5.08" y1="-3.81" x2="-5.08" y2="-3.81" width="0.2032" layer="21"/>
+<wire x1="-5.08" y1="-3.81" x2="-5.08" y2="-2.54" width="0.2032" layer="21"/>
+<wire x1="-5.08" y1="-2.54" x2="-5.08" y2="2.54" width="0.2032" layer="21"/>
+<wire x1="-5.08" y1="2.54" x2="-5.08" y2="4.19" width="0.2032" layer="21"/>
+<wire x1="-5.08" y1="2.54" x2="5.08" y2="2.54" width="0.2032" layer="21"/>
+<wire x1="-5.08" y1="-2.54" x2="5.08" y2="-2.54" width="0.2032" layer="21"/>
+<circle x="2.54" y="0" radius="0.45" width="0" layer="51"/>
+<circle x="-2.54" y="0" radius="0.45" width="0" layer="51"/>
+<text x="-4.445" y="4.445" size="1.27" layer="25">&gt;NAME</text>
+<text x="-4.445" y="-5.715" size="1.27" layer="27">&gt;VALUE</text>
+</package>
 </packages>
 <symbols>
 <symbol name="PSW_5">
@@ -224,6 +245,21 @@ In this library the device names are the same as the pin names of the symbols, t
 <wire x1="-12.7" y1="10.16" x2="-2.54" y2="10.16" width="0.254" layer="94"/>
 <pin name="GND" x="-7.62" y="-10.16" visible="off" length="point" direction="pwr" rot="R90"/>
 <pin name="VCC" x="-7.62" y="10.16" visible="off" length="point" direction="pwr" rot="R270"/>
+</symbol>
+<symbol name="2POL">
+<description>generic 2 pol clamp</description>
+<pin name="1" x="-5.08" y="0" visible="pad" length="short" direction="pas"/>
+<pin name="2" x="-5.08" y="-2.54" visible="pad" length="short" direction="pas"/>
+<wire x1="-2.54" y1="2.54" x2="-2.54" y2="0" width="0.4064" layer="94"/>
+<wire x1="-2.54" y1="0" x2="-2.54" y2="-2.54" width="0.4064" layer="94"/>
+<wire x1="-2.54" y1="-2.54" x2="-2.54" y2="-5.08" width="0.4064" layer="94"/>
+<wire x1="-2.54" y1="-5.08" x2="2.54" y2="-5.08" width="0.4064" layer="94"/>
+<wire x1="2.54" y1="-5.08" x2="2.54" y2="2.54" width="0.4064" layer="94"/>
+<wire x1="2.54" y1="2.54" x2="-2.54" y2="2.54" width="0.4064" layer="94"/>
+<circle x="0" y="0" radius="1.016" width="0.254" layer="94"/>
+<circle x="0" y="-2.54" radius="1.016" width="0.254" layer="94"/>
+<wire x1="-2.54" y1="0" x2="0" y2="0" width="0.1524" layer="94"/>
+<wire x1="-2.54" y1="-2.54" x2="0" y2="-2.54" width="0.1524" layer="94"/>
 </symbol>
 </symbols>
 <devicesets>
@@ -319,6 +355,26 @@ the advantages of Reed Technology.
 </connects>
 <technologies>
 <technology name=""/>
+</technologies>
+</device>
+</devices>
+</deviceset>
+<deviceset name="RIACON_101_2">
+<description>&lt;b&gt;RIACON Anschlussklemme (AKL) Typ 101&lt;/b&gt;
+Rastermaß 5,08 mm</description>
+<gates>
+<gate name="G$1" symbol="2POL" x="0" y="0"/>
+</gates>
+<devices>
+<device name="" package="RIACON_101_2">
+<connects>
+<connect gate="G$1" pin="1" pad="1"/>
+<connect gate="G$1" pin="2" pad="2"/>
+</connects>
+<technologies>
+<technology name="">
+<attribute name="REICHELT" value="AKL 101-02" constant="no"/>
+</technology>
 </technologies>
 </device>
 </devices>
@@ -11984,35 +12040,6 @@ Source: www.farnell.com/datasheets/247.pdf</description>
 Grid 5.08 mm&lt;p&gt;
 &lt;author&gt;Created by librarian@cadsoft.de&lt;/author&gt;</description>
 <packages>
-<package name="W237-132">
-<description>&lt;b&gt;WAGO SREW CLAMP&lt;/b&gt;</description>
-<wire x1="-3.5306" y1="-1.651" x2="-1.524" y2="0.3556" width="0.254" layer="51"/>
-<wire x1="1.6256" y1="-1.6764" x2="3.5306" y2="0.3556" width="0.254" layer="51"/>
-<wire x1="-5.08" y1="4.191" x2="5.08" y2="4.191" width="0.1524" layer="21"/>
-<wire x1="5.08" y1="-4.826" x2="5.08" y2="-2.413" width="0.1524" layer="21"/>
-<wire x1="5.08" y1="-4.826" x2="-5.08" y2="-4.826" width="0.1524" layer="21"/>
-<wire x1="-5.08" y1="4.191" x2="-5.08" y2="-2.413" width="0.1524" layer="21"/>
-<wire x1="-5.08" y1="-2.413" x2="-3.429" y2="-2.413" width="0.1524" layer="21"/>
-<wire x1="-3.429" y1="-2.413" x2="-1.651" y2="-2.413" width="0.1524" layer="51"/>
-<wire x1="-1.651" y1="-2.413" x2="1.651" y2="-2.413" width="0.1524" layer="21"/>
-<wire x1="3.429" y1="-2.413" x2="5.08" y2="-2.413" width="0.1524" layer="21"/>
-<wire x1="-5.08" y1="-2.413" x2="-5.08" y2="-4.826" width="0.1524" layer="21"/>
-<wire x1="5.08" y1="-2.413" x2="5.08" y2="4.191" width="0.1524" layer="21"/>
-<wire x1="-5.08" y1="4.191" x2="-5.08" y2="4.445" width="0.1524" layer="21"/>
-<wire x1="-5.08" y1="4.445" x2="5.08" y2="4.445" width="0.1524" layer="21"/>
-<wire x1="5.08" y1="4.191" x2="5.08" y2="4.445" width="0.1524" layer="21"/>
-<wire x1="1.651" y1="-2.413" x2="3.429" y2="-2.413" width="0.1524" layer="51"/>
-<circle x="-2.54" y="-0.635" radius="1.4986" width="0.1524" layer="51"/>
-<circle x="-2.54" y="2.8448" radius="0.508" width="0.1524" layer="21"/>
-<circle x="2.54" y="-0.635" radius="1.4986" width="0.1524" layer="51"/>
-<circle x="2.54" y="2.8448" radius="0.508" width="0.1524" layer="21"/>
-<pad name="1" x="-2.54" y="-0.635" drill="1.1938" shape="long" rot="R90"/>
-<pad name="2" x="2.54" y="-0.635" drill="1.1938" shape="long" rot="R90"/>
-<text x="-4.445" y="1.27" size="1.27" layer="51" ratio="10">1</text>
-<text x="0.6858" y="1.2192" size="1.27" layer="51" ratio="10">2</text>
-<text x="-3.81" y="-6.985" size="1.27" layer="27" ratio="10">&gt;VALUE</text>
-<text x="-3.81" y="-4.318" size="1.27" layer="25" ratio="10">&gt;NAME</text>
-</package>
 <package name="W237-133">
 <description>&lt;b&gt;WAGO SREW CLAMP&lt;/b&gt;</description>
 <wire x1="-6.0706" y1="-1.651" x2="-4.064" y2="0.3556" width="0.254" layer="51"/>
@@ -12112,29 +12139,6 @@ Grid 5.08 mm&lt;p&gt;
 </symbol>
 </symbols>
 <devicesets>
-<deviceset name="W237-02P" prefix="X" uservalue="yes">
-<description>&lt;b&gt;WAGO SREW CLAMP&lt;/b&gt;</description>
-<gates>
-<gate name="-1" symbol="KL" x="0" y="0" addlevel="always"/>
-<gate name="-2" symbol="KL+V" x="0" y="-5.08" addlevel="always"/>
-</gates>
-<devices>
-<device name="" package="W237-132">
-<connects>
-<connect gate="-1" pin="KL" pad="1"/>
-<connect gate="-2" pin="KL" pad="2"/>
-</connects>
-<technologies>
-<technology name="">
-<attribute name="MF" value="" constant="no"/>
-<attribute name="MPN" value="" constant="no"/>
-<attribute name="OC_FARNELL" value="unknown" constant="no"/>
-<attribute name="OC_NEWARK" value="unknown" constant="no"/>
-</technology>
-</technologies>
-</device>
-</devices>
-</deviceset>
 <deviceset name="W237-03P" prefix="X" uservalue="yes">
 <description>&lt;b&gt;WAGO SREW CLAMP&lt;/b&gt;</description>
 <gates>
@@ -12270,20 +12274,14 @@ Grid 5.08 mm&lt;p&gt;
 <part name="GND7" library="supply1" deviceset="GND" device=""/>
 <part name="R2" library="resistor" deviceset="R-EU_" device="0204/5" value="10K"/>
 <part name="SUPPLY5" library="supply2" deviceset="VCC" device=""/>
-<part name="X1" library="con-wago-508" deviceset="W237-02P" device="" value="ENDSTOP1"/>
-<part name="X2" library="con-wago-508" deviceset="W237-02P" device="" value="ENDSTOP2"/>
-<part name="R3" library="resistor" deviceset="R-EU_" device="R0805W" value="10K"/>
-<part name="R4" library="resistor" deviceset="R-EU_" device="R0805W" value="10K"/>
+<part name="R3" library="resistor" deviceset="R-EU_" device="0204/5" value="10K"/>
+<part name="R4" library="resistor" deviceset="R-EU_" device="0204/5" value="10K"/>
 <part name="GND5" library="supply1" deviceset="GND" device=""/>
-<part name="X3" library="con-wago-508" deviceset="W237-02P" device="" value="DOORSTATE"/>
-<part name="X4" library="con-wago-508" deviceset="W237-02P" device="" value="LOCKSTATE"/>
-<part name="R5" library="resistor" deviceset="R-EU_" device="R0805W" value="10K"/>
-<part name="R6" library="resistor" deviceset="R-EU_" device="R0805W" value="10K"/>
-<part name="X5" library="con-wago-508" deviceset="W237-02P" device="" value="MOTOR"/>
+<part name="R5" library="resistor" deviceset="R-EU_" device="0204/5" value="10K"/>
+<part name="R6" library="resistor" deviceset="R-EU_" device="0204/5" value="10K"/>
 <part name="U$2" library="n39" deviceset="SIL05-1A72" device=""/>
 <part name="D3" library="diode" deviceset="SCHOTTKY-DIODE" device="DO35-7"/>
 <part name="GND9" library="supply1" deviceset="GND" device=""/>
-<part name="X6" library="con-wago-508" deviceset="W237-02P" device="" value="NERDSTERN"/>
 <part name="T1" library="transistor" deviceset="BC337" device=""/>
 <part name="T2" library="transistor" deviceset="BC337" device=""/>
 <part name="R7" library="resistor" deviceset="R-EU_" device="0204/5" value="470R"/>
@@ -12293,8 +12291,8 @@ Grid 5.08 mm&lt;p&gt;
 <part name="HANDSHAKE" library="con-wago-508" deviceset="W237-04P" device=""/>
 <part name="R9" library="resistor" deviceset="R-EU_" device="0207/2V"/>
 <part name="R10" library="resistor" deviceset="R-EU_" device="0207/2V"/>
-<part name="C6" library="resistor" deviceset="C-EU" device="C0805K" value="12p"/>
-<part name="C7" library="resistor" deviceset="C-EU" device="C0805K" value="12p"/>
+<part name="C6" library="resistor" deviceset="C-EU" device="050-025X075" value="12p"/>
+<part name="C7" library="resistor" deviceset="C-EU" device="050-025X075" value="12p"/>
 <part name="GND2" library="supply1" deviceset="GND" device=""/>
 <part name="C8" library="resistor" deviceset="C-EU" device="025-024X044" value="100n"/>
 <part name="C9" library="resistor" deviceset="CPOL-EU" device="TAP5-80" value="470u"/>
@@ -12310,6 +12308,12 @@ Grid 5.08 mm&lt;p&gt;
 <part name="U$3" library="n39" deviceset="AVR_ISP" device=""/>
 <part name="TX" library="wirepad" deviceset="1,6/0,9" device=""/>
 <part name="RX" library="wirepad" deviceset="1,6/0,9" device=""/>
+<part name="ENDSTOP1" library="n39" deviceset="RIACON_101_2" device=""/>
+<part name="ENDSTOP2" library="n39" deviceset="RIACON_101_2" device=""/>
+<part name="DOORSTATE" library="n39" deviceset="RIACON_101_2" device=""/>
+<part name="LOCKSTATE" library="n39" deviceset="RIACON_101_2" device=""/>
+<part name="MOTOR" library="n39" deviceset="RIACON_101_2" device=""/>
+<part name="NERDSTERN" library="n39" deviceset="RIACON_101_2" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -12363,26 +12367,14 @@ Grid 5.08 mm&lt;p&gt;
 <instance part="GND7" gate="1" x="30.48" y="22.86"/>
 <instance part="R2" gate="G$1" x="177.8" y="-2.54" rot="R90"/>
 <instance part="SUPPLY5" gate="G$1" x="177.8" y="38.1"/>
-<instance part="X1" gate="-1" x="-88.9" y="-10.16"/>
-<instance part="X1" gate="-2" x="-88.9" y="-15.24"/>
-<instance part="X2" gate="-1" x="-88.9" y="-25.4"/>
-<instance part="X2" gate="-2" x="-88.9" y="-30.48"/>
 <instance part="R3" gate="G$1" x="-55.88" y="-20.32" rot="R270"/>
 <instance part="R4" gate="G$1" x="-55.88" y="-35.56" rot="R270"/>
 <instance part="GND5" gate="1" x="-50.8" y="-88.9"/>
-<instance part="X3" gate="-1" x="-88.9" y="-43.18"/>
-<instance part="X3" gate="-2" x="-88.9" y="-48.26"/>
-<instance part="X4" gate="-1" x="-88.9" y="-58.42"/>
-<instance part="X4" gate="-2" x="-88.9" y="-63.5"/>
 <instance part="R5" gate="G$1" x="-55.88" y="-53.34" rot="R270"/>
 <instance part="R6" gate="G$1" x="-55.88" y="-68.58" rot="R270"/>
-<instance part="X5" gate="-1" x="15.24" y="17.78" rot="MR90"/>
-<instance part="X5" gate="-2" x="10.16" y="17.78" rot="MR90"/>
 <instance part="U$2" gate="G$1" x="15.24" y="-17.78" rot="R180"/>
 <instance part="D3" gate="G$1" x="40.64" y="-20.32" rot="R270"/>
 <instance part="GND9" gate="1" x="48.26" y="-10.16"/>
-<instance part="X6" gate="-1" x="-2.54" y="-15.24"/>
-<instance part="X6" gate="-2" x="-2.54" y="-20.32"/>
 <instance part="T1" gate="G$1" x="17.78" y="-66.04"/>
 <instance part="T2" gate="G$1" x="17.78" y="-81.28"/>
 <instance part="R7" gate="G$1" x="7.62" y="-66.04"/>
@@ -12414,6 +12406,12 @@ Grid 5.08 mm&lt;p&gt;
 <instance part="U$3" gate="G$1" x="172.72" y="-50.8"/>
 <instance part="TX" gate="1" x="93.98" y="17.78"/>
 <instance part="RX" gate="1" x="101.6" y="15.24"/>
+<instance part="ENDSTOP1" gate="G$1" x="-88.9" y="-15.24" rot="R180"/>
+<instance part="ENDSTOP2" gate="G$1" x="-88.9" y="-30.48" rot="R180"/>
+<instance part="DOORSTATE" gate="G$1" x="-88.9" y="-48.26" rot="R180"/>
+<instance part="LOCKSTATE" gate="G$1" x="-88.9" y="-63.5" rot="R180"/>
+<instance part="MOTOR" gate="G$1" x="15.24" y="15.24" rot="R270"/>
+<instance part="NERDSTERN" gate="G$1" x="-7.62" y="-17.78" rot="R180"/>
 </instances>
 <busses>
 </busses>
@@ -12428,23 +12426,23 @@ Grid 5.08 mm&lt;p&gt;
 <junction x="-53.34" y="35.56"/>
 </segment>
 <segment>
-<pinref part="X1" gate="-1" pin="KL"/>
-<wire x1="-83.82" y1="-10.16" x2="-73.66" y2="-10.16" width="0.1524" layer="91"/>
-<wire x1="-73.66" y1="-10.16" x2="-73.66" y2="-25.4" width="0.1524" layer="91"/>
 <pinref part="SUPPLY3" gate="G$1" pin="VCC"/>
-<wire x1="-73.66" y1="-25.4" x2="-73.66" y2="-43.18" width="0.1524" layer="91"/>
-<wire x1="-73.66" y1="-43.18" x2="-73.66" y2="-58.42" width="0.1524" layer="91"/>
-<wire x1="-73.66" y1="-58.42" x2="-73.66" y2="-88.9" width="0.1524" layer="91"/>
+<wire x1="-73.66" y1="-12.7" x2="-73.66" y2="-27.94" width="0.1524" layer="91"/>
+<wire x1="-73.66" y1="-27.94" x2="-73.66" y2="-45.72" width="0.1524" layer="91"/>
+<wire x1="-73.66" y1="-45.72" x2="-73.66" y2="-60.96" width="0.1524" layer="91"/>
+<wire x1="-73.66" y1="-60.96" x2="-73.66" y2="-88.9" width="0.1524" layer="91"/>
 <wire x1="-73.66" y1="-88.9" x2="-83.82" y2="-88.9" width="0.1524" layer="91"/>
-<pinref part="X2" gate="-1" pin="KL"/>
-<wire x1="-83.82" y1="-25.4" x2="-73.66" y2="-25.4" width="0.1524" layer="91"/>
-<junction x="-73.66" y="-25.4"/>
-<pinref part="X3" gate="-1" pin="KL"/>
-<wire x1="-83.82" y1="-43.18" x2="-73.66" y2="-43.18" width="0.1524" layer="91"/>
-<junction x="-73.66" y="-43.18"/>
-<pinref part="X4" gate="-1" pin="KL"/>
-<wire x1="-83.82" y1="-58.42" x2="-73.66" y2="-58.42" width="0.1524" layer="91"/>
-<junction x="-73.66" y="-58.42"/>
+<pinref part="ENDSTOP1" gate="G$1" pin="2"/>
+<wire x1="-83.82" y1="-12.7" x2="-73.66" y2="-12.7" width="0.1524" layer="91"/>
+<pinref part="LOCKSTATE" gate="G$1" pin="2"/>
+<wire x1="-83.82" y1="-60.96" x2="-73.66" y2="-60.96" width="0.1524" layer="91"/>
+<junction x="-73.66" y="-60.96"/>
+<pinref part="DOORSTATE" gate="G$1" pin="2"/>
+<wire x1="-83.82" y1="-45.72" x2="-73.66" y2="-45.72" width="0.1524" layer="91"/>
+<junction x="-73.66" y="-45.72"/>
+<pinref part="ENDSTOP2" gate="G$1" pin="2"/>
+<wire x1="-83.82" y1="-27.94" x2="-73.66" y2="-27.94" width="0.1524" layer="91"/>
+<junction x="-73.66" y="-27.94"/>
 </segment>
 <segment>
 <pinref part="SUPPLY5" gate="G$1" pin="VCC"/>
@@ -12698,8 +12696,9 @@ Grid 5.08 mm&lt;p&gt;
 <label x="22.86" y="20.32" size="1.778" layer="95" rot="R270"/>
 <wire x1="22.86" y1="22.86" x2="22.86" y2="27.94" width="0.1524" layer="91"/>
 <junction x="22.86" y="27.94"/>
-<pinref part="X5" gate="-1" pin="KL"/>
 <wire x1="22.86" y1="22.86" x2="15.24" y2="22.86" width="0.1524" layer="91"/>
+<pinref part="MOTOR" gate="G$1" pin="1"/>
+<wire x1="15.24" y1="22.86" x2="15.24" y2="20.32" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="M_OUT2" class="0">
@@ -12715,8 +12714,9 @@ Grid 5.08 mm&lt;p&gt;
 <label x="2.54" y="20.32" size="1.778" layer="95" rot="R270"/>
 <wire x1="2.54" y1="27.94" x2="2.54" y2="22.86" width="0.1524" layer="91"/>
 <junction x="2.54" y="27.94"/>
-<pinref part="X5" gate="-2" pin="KL"/>
-<wire x1="2.54" y1="22.86" x2="10.16" y2="22.86" width="0.1524" layer="91"/>
+<wire x1="2.54" y1="22.86" x2="12.7" y2="22.86" width="0.1524" layer="91"/>
+<pinref part="MOTOR" gate="G$1" pin="2"/>
+<wire x1="12.7" y1="22.86" x2="12.7" y2="20.32" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$6" class="0">
@@ -12751,7 +12751,6 @@ Grid 5.08 mm&lt;p&gt;
 </net>
 <net name="ENDSTOP1" class="0">
 <segment>
-<pinref part="X1" gate="-2" pin="KL"/>
 <pinref part="R3" gate="G$1" pin="1"/>
 <wire x1="-83.82" y1="-15.24" x2="-66.04" y2="-15.24" width="0.1524" layer="91"/>
 <wire x1="-66.04" y1="-15.24" x2="-55.88" y2="-15.24" width="0.1524" layer="91"/>
@@ -12760,6 +12759,7 @@ Grid 5.08 mm&lt;p&gt;
 <label x="-38.1" y="-15.24" size="1.778" layer="95"/>
 <pinref part="C15" gate="G$1" pin="2"/>
 <junction x="-66.04" y="-15.24"/>
+<pinref part="ENDSTOP1" gate="G$1" pin="1"/>
 </segment>
 <segment>
 <pinref part="IC2" gate="G$1" pin="PD2(INT0)"/>
@@ -12769,7 +12769,6 @@ Grid 5.08 mm&lt;p&gt;
 </net>
 <net name="ENDSTOP2" class="0">
 <segment>
-<pinref part="X2" gate="-2" pin="KL"/>
 <pinref part="R4" gate="G$1" pin="1"/>
 <wire x1="-83.82" y1="-30.48" x2="-66.04" y2="-30.48" width="0.1524" layer="91"/>
 <wire x1="-66.04" y1="-30.48" x2="-55.88" y2="-30.48" width="0.1524" layer="91"/>
@@ -12778,6 +12777,7 @@ Grid 5.08 mm&lt;p&gt;
 <label x="-38.1" y="-30.48" size="1.778" layer="95"/>
 <pinref part="C16" gate="G$1" pin="2"/>
 <junction x="-66.04" y="-30.48"/>
+<pinref part="ENDSTOP2" gate="G$1" pin="1"/>
 </segment>
 <segment>
 <pinref part="IC2" gate="G$1" pin="PD3(INT1)"/>
@@ -12787,12 +12787,12 @@ Grid 5.08 mm&lt;p&gt;
 </net>
 <net name="DOORSTATE" class="0">
 <segment>
-<pinref part="X3" gate="-2" pin="KL"/>
 <wire x1="-83.82" y1="-48.26" x2="-55.88" y2="-48.26" width="0.1524" layer="91"/>
 <label x="-38.1" y="-48.26" size="1.778" layer="95"/>
 <pinref part="R5" gate="G$1" pin="1"/>
 <wire x1="-55.88" y1="-48.26" x2="-40.64" y2="-48.26" width="0.1524" layer="91"/>
 <junction x="-55.88" y="-48.26"/>
+<pinref part="DOORSTATE" gate="G$1" pin="1"/>
 </segment>
 <segment>
 <pinref part="IC2" gate="G$1" pin="PC0(ADC0)"/>
@@ -12813,11 +12813,11 @@ Grid 5.08 mm&lt;p&gt;
 </net>
 <net name="LOCKSTATE" class="0">
 <segment>
-<pinref part="X4" gate="-2" pin="KL"/>
-<wire x1="-83.82" y1="-63.5" x2="-55.88" y2="-63.5" width="0.1524" layer="91"/>
 <label x="-38.1" y="-63.5" size="1.778" layer="95"/>
 <pinref part="R6" gate="G$1" pin="1"/>
 <wire x1="-55.88" y1="-63.5" x2="-40.64" y2="-63.5" width="0.1524" layer="91"/>
+<pinref part="LOCKSTATE" gate="G$1" pin="1"/>
+<wire x1="-83.82" y1="-63.5" x2="-55.88" y2="-63.5" width="0.1524" layer="91"/>
 <junction x="-55.88" y="-63.5"/>
 </segment>
 <segment>
@@ -12928,18 +12928,20 @@ Grid 5.08 mm&lt;p&gt;
 </net>
 <net name="N$4" class="0">
 <segment>
-<pinref part="X6" gate="-1" pin="KL"/>
 <wire x1="2.54" y1="-10.16" x2="2.54" y2="-15.24" width="0.1524" layer="91"/>
 <pinref part="U$2" gate="G$1" pin="7"/>
 <wire x1="2.54" y1="-10.16" x2="17.78" y2="-10.16" width="0.1524" layer="91"/>
+<pinref part="NERDSTERN" gate="G$1" pin="2"/>
+<wire x1="2.54" y1="-15.24" x2="-2.54" y2="-15.24" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$5" class="0">
 <segment>
-<pinref part="X6" gate="-2" pin="KL"/>
-<wire x1="2.54" y1="-30.48" x2="2.54" y2="-20.32" width="0.1524" layer="91"/>
+<wire x1="2.54" y1="-30.48" x2="2.54" y2="-17.78" width="0.1524" layer="91"/>
 <pinref part="U$2" gate="G$1" pin="1"/>
 <wire x1="2.54" y1="-30.48" x2="17.78" y2="-30.48" width="0.1524" layer="91"/>
+<pinref part="NERDSTERN" gate="G$1" pin="1"/>
+<wire x1="2.54" y1="-17.78" x2="-2.54" y2="-17.78" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="LED_G" class="0">
