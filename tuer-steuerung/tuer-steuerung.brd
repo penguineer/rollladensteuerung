@@ -1691,7 +1691,7 @@ design rules under a new name.</description>
 <param name="mdCopperDimension" value="40mil"/>
 <param name="mdDrill" value="8mil"/>
 <param name="mdSmdStop" value="0mil"/>
-<param name="msWidth" value="10mil"/>
+<param name="msWidth" value="12mil"/>
 <param name="msDrill" value="24mil"/>
 <param name="msMicroVia" value="9.99mm"/>
 <param name="msBlindViaRatio" value="0.5"/>
@@ -2005,6 +2005,7 @@ design rules under a new name.</description>
 <vertex x="0" y="0"/>
 </polygon>
 <contactref element="U$3" pad="GND"/>
+<contactref element="IC1" pad="10"/>
 </signal>
 <signal name="N$1">
 <contactref element="IC2" pad="10"/>
@@ -2114,9 +2115,6 @@ design rules under a new name.</description>
 <contactref element="C5" pad="1"/>
 <wire x1="41.91" y1="55.02" x2="40.23" y2="53.34" width="0.6096" layer="16"/>
 <wire x1="41.91" y1="58.42" x2="41.91" y2="55.02" width="0.6096" layer="16"/>
-</signal>
-<signal name="M_SENSE">
-<contactref element="IC1" pad="10"/>
 </signal>
 <signal name="ENDSTOP1">
 <contactref element="R3" pad="1"/>
