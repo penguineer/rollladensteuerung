@@ -12307,8 +12307,6 @@ Source: www.farnell.com/datasheets/247.pdf</description>
 <part name="R7" library="resistor" deviceset="R-EU_" device="0204/5" value="1,5K"/>
 <part name="R8" library="resistor" deviceset="R-EU_" device="0204/5" value="1,5K"/>
 <part name="GND10" library="supply1" deviceset="GND" device=""/>
-<part name="R9" library="resistor" deviceset="R-EU_" device="0207/2V"/>
-<part name="R10" library="resistor" deviceset="R-EU_" device="0207/2V"/>
 <part name="C6" library="resistor" deviceset="C-EU" device="050-025X075" value="12p"/>
 <part name="C7" library="resistor" deviceset="C-EU" device="050-025X075" value="12p"/>
 <part name="GND2" library="supply1" deviceset="GND" device=""/>
@@ -12401,8 +12399,6 @@ Source: www.farnell.com/datasheets/247.pdf</description>
 <instance part="R7" gate="G$1" x="7.62" y="-66.04"/>
 <instance part="R8" gate="G$1" x="7.62" y="-81.28"/>
 <instance part="GND10" gate="1" x="38.1" y="-93.98"/>
-<instance part="R9" gate="G$1" x="30.48" y="-71.12"/>
-<instance part="R10" gate="G$1" x="30.48" y="-86.36"/>
 <instance part="C6" gate="G$1" x="195.58" y="15.24" rot="R90"/>
 <instance part="C7" gate="G$1" x="195.58" y="5.08" rot="R90"/>
 <instance part="GND2" gate="1" x="203.2" y="-2.54"/>
@@ -13002,30 +12998,17 @@ Source: www.farnell.com/datasheets/247.pdf</description>
 <net name="N$11" class="0">
 <segment>
 <pinref part="T1" gate="G$1" pin="E"/>
-<pinref part="R9" gate="G$1" pin="1"/>
-<wire x1="20.32" y1="-71.12" x2="25.4" y2="-71.12" width="0.1524" layer="91"/>
-</segment>
-</net>
-<net name="N$12" class="0">
-<segment>
-<pinref part="R9" gate="G$1" pin="2"/>
-<wire x1="35.56" y1="-71.12" x2="43.18" y2="-71.12" width="0.1524" layer="91"/>
 <pinref part="U$4" gate="G$1" pin="1"/>
+<wire x1="20.32" y1="-71.12" x2="43.18" y2="-71.12" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$13" class="0">
 <segment>
 <pinref part="T2" gate="G$1" pin="E"/>
-<pinref part="R10" gate="G$1" pin="1"/>
-<wire x1="20.32" y1="-86.36" x2="25.4" y2="-86.36" width="0.1524" layer="91"/>
-</segment>
-</net>
-<net name="N$14" class="0">
-<segment>
-<pinref part="R10" gate="G$1" pin="2"/>
 <wire x1="35.56" y1="-86.36" x2="35.56" y2="-76.2" width="0.1524" layer="91"/>
 <wire x1="35.56" y1="-76.2" x2="43.18" y2="-76.2" width="0.1524" layer="91"/>
 <pinref part="U$4" gate="G$1" pin="3"/>
+<wire x1="20.32" y1="-86.36" x2="35.56" y2="-86.36" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$15" class="0">
