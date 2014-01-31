@@ -41,7 +41,11 @@
  * (Setzt Motor-Enable auf 0)
  */
 inline void stopMotor() {
-  resetPortC((1 << PC1) | (1 << PC2) | (1 << PC3));
+  resetPortC((1 << PC2) | (1 << PC3));
+  // aktives Bremsen passiert nur, wenn die H-Brücke aktiviert ist
+  // -> Enable 200ms später löschen
+  _delay_ms(250);
+  resetPortC((1 << PC1));
 }
 
 /*
