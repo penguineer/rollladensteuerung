@@ -19,28 +19,23 @@
 #include <stdint.h>
 
 
-inline void setPortB(char mask) {
-  PORTB |= mask;
-}
+/// Port Helper Macros
+#define setPortB(mask)   (PORTB |= (mask))
+#define resetPortB(mask) (PORTB &= ~(mask))
+#define setPortC(mask)   (PORTC |= (mask))
+#define resetPortC(mask) (PORTC &= ~(mask))
+#define setPortD(mask)   (PORTD |= (mask))
+#define resetPortD(mask) (PORTD &= ~(mask))
 
-inline void resetPortB(char mask) {
-  PORTB &= ~mask; 
-}
+#define isEndstopClosed (((PIND & (1<<PD2)) == (1<<PD2)) ? 1 : 0)
+#define isEndstopOpen (((PIND & (1<<PD3)) == (1<<PD3)) ? 1 : 0)
 
-inline void setPortC(char mask) {
-  PORTC |= mask;
-}
-
-inline void resetPortC(char mask) {
-  PORTC &= ~mask; 
-}
-
-inline void setPortD(char mask) {
-  PORTD |= mask;
-}
-
-inline void resetPortD(char mask) {
-  PORTD &= ~mask; 
+/*
+ * Motor anhalten!
+ * (Setzt Motor-Enable auf 0)
+ */
+inline void stopMotor() {
+  resetPortC(1 << PC1);
 }
 
 /*
@@ -118,8 +113,8 @@ void init(void) {
    * Pin-Config PortD:
    *   PD0: RXD
    *   PD1; TXD
-   *   PD2: IN	Endstop 1 (INT0)
-   *   PD3: IN	Endstop 2 (INT1)
+   *   PD2: IN	Endstop 1, Closed (INT0)
+   *   PD3: IN	Endstop 2, Open   (INT1)
    */
   
   DDRB  = 0b00000110;
@@ -137,6 +132,16 @@ void init(void) {
    /*  disable interrupts  */
    cli();
    
+   // Interrupts einstellen
+   // interrupt bei Pegelwechsel
+   
+   // PD2 -> INT0
+   MCUCR |= (1 << ISC00); // | (1 << ISC01);
+   // PD3 -> INT1
+   MCUCR |= (1 << ISC10); // | (1 << ISC11);
+   
+   // aktivieren
+   GICR |= (1 << INT0) | (1 << INT1);
    
    /*  set clock   */
   //CLKPR = (1 << CLKPCE);  /*  enable clock prescaler update       */
@@ -171,6 +176,25 @@ int main(void)
   color(COL_RED, COL_OFF);
   _delay_ms(100);
   
+  setPortC(1 << PC2);
+  setPortC(1 << PC1);
+  
+  while(1) {
+    
+    
+/*    if ((PIND & (1<<PD2)) == (1<<PD2))
+      color(COL_GREEN, COL_ON);
+    else
+      color(COL_GREEN, COL_OFF);
+
+    if ((PIND & (1<<PD3)) == (1<<PD3))
+      color(COL_RED, COL_ON);
+    else
+      color(COL_RED, COL_OFF);
+*/
+    
+  }
+  
   return 0;
 }
 
@@ -178,3 +202,33 @@ int main(void)
 //ISR (TIMER0_OVF_vect)
 //{
 //}
+
+ISR (INT0_vect) {
+    // store state and disable interrupts
+  const uint8_t _sreg = SREG;
+  cli();
+  
+  color(COL_RED, isEndstopClosed);
+  
+  // stop motor
+  if (isEndstopClosed) 
+    stopMotor();
+    
+  // restore state
+  SREG = _sreg;
+}
+
+ISR (INT1_vect) {
+    // store state and disable interrupts
+  const uint8_t _sreg = SREG;
+  cli();
+
+  color(COL_GREEN, isEndstopOpen);
+
+  // stop motor
+  if (isEndstopOpen) 
+    stopMotor();
+
+  // restore state
+  SREG = _sreg;
+}
