@@ -27,6 +27,41 @@ inline void resetPortB(char mask) {
   PORTB &= ~mask; 
 }
 
+inline void setPortC(char mask) {
+  PORTC |= mask;
+}
+
+inline void resetPortC(char mask) {
+  PORTC &= ~mask; 
+}
+
+inline void setPortD(char mask) {
+  PORTD |= mask;
+}
+
+inline void resetPortD(char mask) {
+  PORTD &= ~mask; 
+}
+
+/*
+ * Farbanzeige (LED) setzen oder löschen
+ * 
+ * col      Farbe
+ * state    Status an/aus
+ * siehe Konstanten unter diesem Kommentar
+ */
+#define COL_RED   1
+#define COL_GREEN 2
+#define COL_OFF   0
+#define COL_ON    1
+inline void color(const char col, const char state) {
+  const char mask = 1 << (col);
+  if (state)
+    setPortB(mask);
+  else
+    resetPortB(mask);
+}
+
 void set_output(const char output) {
   // store state and disable interrupts
   const uint8_t _sreg = SREG;
@@ -87,26 +122,34 @@ void init(void) {
    *   PD3: IN	Endstop 2 (INT1)
    */
   
-  DDRB  = 0b1111010;
+  DDRB  = 0b00000110;
   // PullUp für Eingänge
-  PORTB = 0b11111010;
+  PORTB = 0b00000000;
+
+  DDRC  = 0b00001110;
+  // PullUp für Eingänge
+  PORTC = 0b00000000;
+
+  DDRD  = 0b00000000;
+  // PullUp für Eingänge
+  PORTD = 0b00000000;
 
    /*  disable interrupts  */
    cli();
    
    
    /*  set clock   */
-  CLKPR = (1 << CLKPCE);  /*  enable clock prescaler update       */
-  CLKPR = 0;              /*  set clock to maximum                */
+  //CLKPR = (1 << CLKPCE);  /*  enable clock prescaler update       */
+  //CLKPR = 0;              /*  set clock to maximum                */
 
   /*  timer init  */
-  TIFR &= ~(1 << TOV0);   /*  clear timer0 overflow interrupt flag    */
-  TIMSK |= (1 << TOIE0);  /*  enable timer0 overflow interrupt        */
+  //TIFR &= ~(1 << TOV0);   /*  clear timer0 overflow interrupt flag    */
+  //TIMSK |= (1 << TOIE0);  /*  enable timer0 overflow interrupt        */
 
   /*  start timer0 by setting last 3 bits in timer0 control register B
    *  to any clock source */
   //TCCR0B = (1 << CS02) | (1 << CS00);
-  TCCR0B = (1 << CS00);
+  //TCCR0B = (1 << CS00);
 
     
   // Global Interrupts aktivieren
@@ -118,12 +161,20 @@ int main(void)
   // initialisieren
   init();
 
-  // TODO hier die main-loop
-
+  // Bereit-Meldung
+  color(COL_GREEN, COL_ON);
+  _delay_ms(100);
+  color(COL_GREEN, COL_OFF);
+  _delay_ms(100);
+  color(COL_RED, COL_ON);
+  _delay_ms(100);
+  color(COL_RED, COL_OFF);
+  _delay_ms(100);
+  
   return 0;
 }
 
 
-ISR (TIMER0_OVF_vect)
-{
-}
+//ISR (TIMER0_OVF_vect)
+//{
+//}
