@@ -27,15 +27,21 @@
 #define setPortD(mask)   (PORTD |= (mask))
 #define resetPortD(mask) (PORTD &= ~(mask))
 
-#define isEndstopClosed (((PIND & (1<<PD2)) == (1<<PD2)) ? 1 : 0)
-#define isEndstopOpen (((PIND & (1<<PD3)) == (1<<PD3)) ? 1 : 0)
+// Endstop-Schalter
+#define isEndstopClosed  (((PIND & (1<<PD2)) == (1<<PD2)) ? 1 : 0)
+#define isEndstopOpen    (((PIND & (1<<PD3)) == (1<<PD3)) ? 1 : 0)
+
+// Command-Eingänge (invertiert!)
+#define isSetClose       (((PINC & (1<<PC4)) == (1<<PC4)) ? 0 : 1)
+#define isSetOpen        (((PINC & (1<<PC5)) == (1<<PC5)) ? 0 : 1)
+
 
 /*
  * Motor anhalten!
  * (Setzt Motor-Enable auf 0)
  */
 inline void stopMotor() {
-  resetPortC(1 << PC1);
+  resetPortC((1 << PC1) | (1 << PC2) | (1 << PC3));
 }
 
 /*
@@ -123,7 +129,7 @@ void init(void) {
 
   DDRC  = 0b00001110;
   // PullUp für Eingänge
-  PORTC = 0b00000000;
+  PORTC = 0b00110000;
 
   DDRD  = 0b00000000;
   // PullUp für Eingänge
@@ -176,12 +182,26 @@ int main(void)
   color(COL_RED, COL_OFF);
   _delay_ms(100);
   
-  setPortC(1 << PC2);
-  setPortC(1 << PC1);
   
   while(1) {
-    
-    
+    if (isSetOpen) {
+      if (!isEndstopOpen) {
+        setPortC(1 << PC1);
+        resetPortC(1 << PC3);
+        setPortC(1 << PC2);
+      }
+    }
+    else if (isSetClose) {
+      if (!isEndstopClosed) {
+        setPortC(1 << PC1);
+        resetPortC(1 << PC2);
+        setPortC(1 << PC3);
+      }
+    }
+    else {
+      stopMotor();
+    }
+
 /*    if ((PIND & (1<<PD2)) == (1<<PD2))
       color(COL_GREEN, COL_ON);
     else
