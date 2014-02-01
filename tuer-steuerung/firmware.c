@@ -212,21 +212,22 @@ void init(void) {
    
    // aktivieren
    GICR |= (1 << INT0) | (1 << INT1);
+
    
    /*  set clock   */
-  //CLKPR = (1 << CLKPCE);  /*  enable clock prescaler update       */
-  //CLKPR = 0;              /*  set clock to maximum                */
+  
+  // prescaler 1024, CTC
+  TCCR1A = 0;
+  TCCR1B = (1 << WGM12) | (1 << CS02) | (1 << CS00);
 
-  /*  timer init  */
-  //TIFR &= ~(1 << TOV0);   /*  clear timer0 overflow interrupt flag    */
-  //TIMSK |= (1 << TOIE0);  /*  enable timer0 overflow interrupt        */
-
-  /*  start timer0 by setting last 3 bits in timer0 control register B
-   *  to any clock source */
-  //TCCR0B = (1 << CS02) | (1 << CS00);
-  //TCCR0B = (1 << CS00);
-
+  // vergleichswert
+  OCR1A = 0xff;
+  
+  // aktivieren
+  TIMSK |= (1 << OCIE1A);
     
+  
+  
   // Global Interrupts aktivieren
   sei();  
 }
@@ -276,12 +277,24 @@ int main(void)
 
 /// Interrupt-Vektoren
 
-//ISR (TIMER0_OVF_vect)
-//{
-//}
+
+ISR (TIMER1_COMPA_vect)
+{
+  // store state and disable interrupts
+  const uint8_t _sreg = SREG;
+  cli();
+
+  // another motor check here
+  checkMotor();
+  
+  // LED setting
+
+  // restore state
+  SREG = _sreg;  
+}
 
 ISR (INT0_vect) {
-    // store state and disable interrupts
+  // store state and disable interrupts
   const uint8_t _sreg = SREG;
   cli();
     
@@ -292,7 +305,7 @@ ISR (INT0_vect) {
 }
 
 ISR (INT1_vect) {
-    // store state and disable interrupts
+  // store state and disable interrupts
   const uint8_t _sreg = SREG;
   cli();
 
