@@ -27,6 +27,8 @@
 #define setPortD(mask)   (PORTD |= (mask))
 #define resetPortD(mask) (PORTD &= ~(mask))
 
+/// Eingänge
+
 // Endstop-Schalter
 #define isEndstopClose   (((PIND & (1<<PD2)) == (1<<PD2)) ? 1 : 0)
 #define isEndstopOpen    (((PIND & (1<<PD3)) == (1<<PD3)) ? 1 : 0)
@@ -35,10 +37,16 @@
 #define isSetClose       (((PINC & (1<<PC4)) == (1<<PC4)) ? 0 : 1)
 #define isSetOpen        (((PINC & (1<<PC5)) == (1<<PC5)) ? 0 : 1)
 
+
+
+
+/// Motor-Funktionen
+
 // Status Motor-Ansteuerung zurückgeben
 #define isHBridgeActive  (((PINC & (1<<PC1)) == (1<<PC1)) ? 1 : 0)
 #define isMotorOpen      (((PINC & (1<<PC2)) == (1<<PC2)) ? 1 : 0)
 #define isMotorClose     (((PINC & (1<<PC3)) == (1<<PC3)) ? 1 : 0)
+
 
 /*
  * Motor anhalten!
@@ -74,7 +82,7 @@ void checkMotor() {
 /*
  * Motor starten
  * direction      Drehrichtung "zu" oder "auf"
- * Konstanten siehe unten
+ * siehe Konstanten unter diesem Kommentar
  */
 #define MOTOR_CLOSE 1
 #define MOTOR_OPEN  2
@@ -107,6 +115,8 @@ void startMotor(const char direction) {
   checkMotor();
 }
 
+
+/// Anzeige-Funktionen (LED)
 /*
  * Farbanzeige (LED) setzen oder löschen
  * 
@@ -126,40 +136,9 @@ void color(const char col, const char state) {
     resetPortB(mask);
 }
 
-void set_output(const char output) {
-  // store state and disable interrupts
-  const uint8_t _sreg = SREG;
-  cli();
-  
-  
-  char data = output;
-   
-  char i;
-  for (i = 0; i < 9; i++) {
-    const char b = data & 0x01;
-    data = data >> 1;
-     
-    // clear all outputs
-    resetPortB((1<<PB3) | (1<<PB4));
-    _delay_us(1);
-     
-    // set DS
-    setPortB(b<<PB3);     
-    _delay_us(1);
-     
-    // shift clock
-    setPortB(1<<PB4);
-    _delay_us(1);
-  }
-
-  // clear all outputs
-  resetPortB((1<<PB3) | (1<<PB4));
-  
-  // restore state
-  SREG = _sreg;  
-}
 
 
+/// Infrastruktur
 
 void init(void) {
   /*
@@ -264,6 +243,9 @@ int main(void)
   return 0;
 }
 
+
+
+/// Interrupt-Vektoren
 
 //ISR (TIMER0_OVF_vect)
 //{
