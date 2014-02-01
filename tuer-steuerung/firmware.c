@@ -28,24 +28,83 @@
 #define resetPortD(mask) (PORTD &= ~(mask))
 
 // Endstop-Schalter
-#define isEndstopClosed  (((PIND & (1<<PD2)) == (1<<PD2)) ? 1 : 0)
+#define isEndstopClose   (((PIND & (1<<PD2)) == (1<<PD2)) ? 1 : 0)
 #define isEndstopOpen    (((PIND & (1<<PD3)) == (1<<PD3)) ? 1 : 0)
 
 // Command-Eingänge (invertiert!)
 #define isSetClose       (((PINC & (1<<PC4)) == (1<<PC4)) ? 0 : 1)
 #define isSetOpen        (((PINC & (1<<PC5)) == (1<<PC5)) ? 0 : 1)
 
+// Status Motor-Ansteuerung zurückgeben
+#define isHBridgeActive  (((PINC & (1<<PC1)) == (1<<PC1)) ? 1 : 0)
+#define isMotorOpen      (((PINC & (1<<PC2)) == (1<<PC2)) ? 1 : 0)
+#define isMotorClose     (((PINC & (1<<PC3)) == (1<<PC3)) ? 1 : 0)
 
 /*
  * Motor anhalten!
- * (Setzt Motor-Enable auf 0)
  */
-inline void stopMotor() {
+void stopMotor() {
   resetPortC((1 << PC2) | (1 << PC3));
   // aktives Bremsen passiert nur, wenn die H-Brücke aktiviert ist
-  // -> Enable 200ms später löschen
+  // -> Enable 250ms später löschen
   _delay_ms(250);
   resetPortC((1 << PC1));
+}
+
+/*
+ * Motor-Stellung und Schalter prüfen, ggf. Motor stoppen.
+ */
+void checkMotor() {
+  // Fall: Motor "auf"
+  if (isMotorOpen) {
+    // Motor darf nur "auf" drehen, wenn der Auf-Endstop nicht erreicht ist
+    if (isEndstopOpen)
+      stopMotor();
+  }
+  
+  // Fall: Motor "zu"
+  if (isMotorClose) {
+    // Motor darf nur "zu" drehen, wenn der Zu-Endstop nicht erreicht ist
+    if (isEndstopClose)
+      stopMotor();
+    //TODO Schließen nur bei geschlossener Tür und offenem Schloss
+  }  
+}
+
+/*
+ * Motor starten
+ * direction      Drehrichtung "zu" oder "auf"
+ * Konstanten siehe unten
+ */
+#define MOTOR_CLOSE 1
+#define MOTOR_OPEN  2
+void startMotor(const char direction) {
+  // Motor Close
+  if (direction == MOTOR_CLOSE) {
+    // endstop close darf nicht aktiv sein
+    if (!isEndstopClose) {
+      // Richtung einstellen
+      resetPortC(1 << PC2);
+      setPortC(1 << PC3);
+      // H-Brücke aktivieren
+      setPortC(1 << PC1);
+    }
+  }
+
+  // Motor Open
+  if (direction == MOTOR_OPEN) {
+    // endstop open darf nicht aktiv sein
+    if (!isEndstopOpen) {
+      // Richtung einstellen
+      resetPortC(1 << PC3);
+      setPortC(1 << PC2);
+      // H-Brücke aktivieren
+      setPortC(1 << PC1);
+    }
+  }
+
+  // abschließender Check
+  checkMotor();
 }
 
 /*
@@ -59,7 +118,7 @@ inline void stopMotor() {
 #define COL_GREEN 2
 #define COL_OFF   0
 #define COL_ON    1
-inline void color(const char col, const char state) {
+void color(const char col, const char state) {
   const char mask = 1 << (col);
   if (state)
     setPortB(mask);
@@ -188,34 +247,17 @@ int main(void)
   
   
   while(1) {
+    checkMotor();
+
     if (isSetOpen) {
-      if (!isEndstopOpen) {
-        setPortC(1 << PC1);
-        resetPortC(1 << PC3);
-        setPortC(1 << PC2);
-      }
+      startMotor(MOTOR_OPEN);
     }
     else if (isSetClose) {
-      if (!isEndstopClosed) {
-        setPortC(1 << PC1);
-        resetPortC(1 << PC2);
-        setPortC(1 << PC3);
-      }
+      startMotor(MOTOR_CLOSE);
     }
     else {
       stopMotor();
     }
-
-/*    if ((PIND & (1<<PD2)) == (1<<PD2))
-      color(COL_GREEN, COL_ON);
-    else
-      color(COL_GREEN, COL_OFF);
-
-    if ((PIND & (1<<PD3)) == (1<<PD3))
-      color(COL_RED, COL_ON);
-    else
-      color(COL_RED, COL_OFF);
-*/
     
   }
   
@@ -231,13 +273,10 @@ ISR (INT0_vect) {
     // store state and disable interrupts
   const uint8_t _sreg = SREG;
   cli();
-  
-  color(COL_RED, isEndstopClosed);
-  
-  // stop motor
-  if (isEndstopClosed) 
-    stopMotor();
     
+  checkMotor();
+  color(COL_RED, isEndstopClose);
+
   // restore state
   SREG = _sreg;
 }
@@ -247,11 +286,10 @@ ISR (INT1_vect) {
   const uint8_t _sreg = SREG;
   cli();
 
+  
+  checkMotor();
   color(COL_GREEN, isEndstopOpen);
 
-  // stop motor
-  if (isEndstopOpen) 
-    stopMotor();
 
   // restore state
   SREG = _sreg;
