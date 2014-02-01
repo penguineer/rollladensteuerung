@@ -137,6 +137,28 @@ void color(const char col, const char state) {
 }
 
 
+/// Zustand
+
+/*
+ * Prüfen, ob das Schloss komplett geöffnet ist
+ * Return: 0, wenn noch nicht komplett geöffnet, sonst ungleich 0
+ */
+char isFullyOpen() {
+  // komplett geöffnet, wenn der Endstop erreicht ist
+  return isEndstopOpen;
+}
+
+/*
+ * Prüfen, ob das Schloss komplett geschlossen ist
+ * Return: 0, wenn noch nicht komplett geschlossen, sonst ungleich 0
+ */
+char isFullyClosed() {
+  // Vorerst; komplett geschlossen, wenn der Endstop erreicht ist
+  return isEndstopClose;
+  
+  //TODO auch vom Schloss-Status abhängig machen
+}
+
 
 /// Infrastruktur
 
@@ -215,13 +237,14 @@ int main(void)
   init();
 
   // Bereit-Meldung
-  color(COL_GREEN, COL_ON);
-  _delay_ms(100);
-  color(COL_GREEN, COL_OFF);
   _delay_ms(100);
   color(COL_RED, COL_ON);
   _delay_ms(100);
   color(COL_RED, COL_OFF);
+  _delay_ms(100);
+  color(COL_GREEN, COL_ON);
+  _delay_ms(100);
+  color(COL_GREEN, COL_OFF);
   _delay_ms(100);
   
   
@@ -237,8 +260,14 @@ int main(void)
     else {
       stopMotor();
     }
+  
+    // grün, wenn komplett offen
+    color(COL_GREEN, isFullyOpen());
     
-  }
+    // rot, wenn komplett geschlossen
+    color(COL_RED, isFullyClosed());
+    
+  } // while
   
   return 0;
 }
@@ -257,7 +286,6 @@ ISR (INT0_vect) {
   cli();
     
   checkMotor();
-  color(COL_RED, isEndstopClose);
 
   // restore state
   SREG = _sreg;
@@ -268,10 +296,7 @@ ISR (INT1_vect) {
   const uint8_t _sreg = SREG;
   cli();
 
-  
   checkMotor();
-  color(COL_GREEN, isEndstopOpen);
-
 
   // restore state
   SREG = _sreg;
