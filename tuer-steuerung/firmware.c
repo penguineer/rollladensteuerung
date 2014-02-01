@@ -117,6 +117,23 @@ void startMotor(const char direction) {
 
 
 /// Anzeige-Funktionen (LED)
+
+// Status
+/*
+ * Bits 0,1 rot
+ * Bits 2,3 grün
+ */
+
+#define LED_OFF  0b00
+#define LED_SLOW 0b01
+#define LED_FAST 0b10
+#define LED_ON   0b11
+
+#define GET_RED     (LEDstatus & 0b0011)
+#define GET_GREEN   ((LEDstatus & 0b1100) >> 2)
+
+static char LEDstatus = 0;
+
 /*
  * Farbanzeige (LED) setzen oder löschen
  * 
@@ -136,6 +153,16 @@ void color(const char col, const char state) {
     resetPortB(mask);
 }
 
+void setLED(const char col, const char state) {
+  if (col == COL_RED) {
+    LEDstatus &= ~(0b0011);
+    LEDstatus |= state;
+  }
+  if (col == COL_GREEN) {
+    LEDstatus &= ~(0b1100);
+    LEDstatus |= (state<<2);
+  }
+}
 
 /// Zustand
 
@@ -263,10 +290,10 @@ int main(void)
     }
   
     // grün, wenn komplett offen
-    color(COL_GREEN, isFullyOpen());
+    setLED(COL_GREEN, isFullyOpen() ? LED_ON : LED_OFF);
     
     // rot, wenn komplett geschlossen
-    color(COL_RED, isFullyClosed());
+    setLED(COL_RED, isFullyClosed() ? LED_ON : LED_OFF);
     
   } // while
   
@@ -277,7 +304,8 @@ int main(void)
 
 /// Interrupt-Vektoren
 
-
+volatile uint8_t blink = 0;
+volatile uint8_t phase = 0;
 ISR (TIMER1_COMPA_vect)
 {
   // store state and disable interrupts
@@ -288,6 +316,42 @@ ISR (TIMER1_COMPA_vect)
   checkMotor();
   
   // LED setting
+
+    // red led
+  const char rst = GET_RED;
+  
+  if (rst == LED_ON)
+    color(COL_RED, COL_ON);
+  else if (rst == LED_OFF)
+    color(COL_RED, COL_OFF);
+
+  // green led
+  const char gst = GET_GREEN;
+  if (gst == LED_ON)
+    color(COL_GREEN, COL_ON);
+  else if (gst == LED_OFF)
+    color(COL_GREEN, COL_OFF);
+
+  // anything blinking
+  blink++;
+  if (blink > 10) {
+    blink = 0;
+    phase++;
+  
+    if (phase > 3)
+      phase = 0;
+
+    if (rst == LED_SLOW)
+      color(COL_RED, phase>1);
+    if (rst == LED_FAST)
+      color(COL_RED, phase%2);
+  
+    if (gst == LED_SLOW)
+      color(COL_GREEN, phase>1);
+    if (gst == LED_FAST)
+      color(COL_GREEN, phase%2);
+  } // blink
+
 
   // restore state
   SREG = _sreg;  
