@@ -37,7 +37,11 @@
 #define isSetClose       (((PINC & (1<<PC4)) == (1<<PC4)) ? 0 : 1)
 #define isSetOpen        (((PINC & (1<<PC5)) == (1<<PC5)) ? 0 : 1)
 
+// Türschloss
+#define isLockOpen       (((PINB & (1<<PB0)) == (1<<PB0)) ? 1 : 0)
 
+// Türstatus
+#define isDoorClosed     (((PINC & (1<<PC0)) == (1<<PC0)) ? 1 : 0)
 
 
 /// Motor-Funktionen
@@ -72,10 +76,17 @@ void checkMotor() {
   
   // Fall: Motor "zu"
   if (isMotorClose) {
+    // schließen nur bei geschlossener Tür
+    if (!isDoorClosed)
+      stopMotor();
+    
     // Motor darf nur "zu" drehen, wenn der Zu-Endstop nicht erreicht ist
     if (isEndstopClose)
       stopMotor();
-    //TODO Schließen nur bei geschlossener Tür und offenem Schloss
+    
+    // fertig, wenn das Schloss nicht mehr offen ist
+    if (!isLockOpen)
+      stopMotor();    
   }  
 }
 
@@ -89,8 +100,8 @@ void checkMotor() {
 void startMotor(const char direction) {
   // Motor Close
   if (direction == MOTOR_CLOSE) {
-    // endstop close darf nicht aktiv sein
-    if (!isEndstopClose) {
+    // endstop close darf nicht aktiv sein, Schloss muss offen sein und Tür muss geschlossen sein
+    if (!isEndstopClose && isLockOpen && isDoorClosed) {
       // Richtung einstellen
       resetPortC(1 << PC2);
       setPortC(1 << PC3);
@@ -180,10 +191,9 @@ char isFullyOpen() {
  * Return: 0, wenn noch nicht komplett geschlossen, sonst ungleich 0
  */
 char isFullyClosed() {
-  // Vorerst; komplett geschlossen, wenn der Endstop erreicht ist
-  return isEndstopClose;
-  
-  //TODO auch vom Schloss-Status abhängig machen
+  // komplett geschlossen, wenn der Endstop erreicht 
+  // oder das Schloss nicht mehr offen ist
+  return isEndstopClose || !isLockOpen;
 }
 
 
@@ -265,15 +275,13 @@ int main(void)
   init();
 
   // Bereit-Meldung
-  _delay_ms(100);
-  color(COL_RED, COL_ON);
-  _delay_ms(100);
-  color(COL_RED, COL_OFF);
-  _delay_ms(100);
-  color(COL_GREEN, COL_ON);
-  _delay_ms(100);
-  color(COL_GREEN, COL_OFF);
-  _delay_ms(100);
+  _delay_ms(250);
+  setLED(COL_RED, LED_FAST);
+  _delay_ms(1000);
+  setLED(COL_RED, LED_OFF);
+  setLED(COL_GREEN, LED_FAST);
+  _delay_ms(700);
+  setLED(COL_GREEN, LED_OFF);
   
   
   while(1) {
@@ -291,7 +299,6 @@ int main(void)
   
     // grün, wenn komplett offen
     setLED(COL_GREEN, isFullyOpen() ? LED_ON : LED_OFF);
-    
     // rot, wenn komplett geschlossen
     setLED(COL_RED, isFullyClosed() ? LED_ON : LED_OFF);
     
