@@ -301,19 +301,29 @@ int main(void)
       startMotor(MOTOR_OPEN);
     }
   
+    // Es wird nur einer der Stati rot/grün angezeigt, 
+    // wenn die Tür "geschlossen" signalisiert, wird rot bevorzugt,
+    // bei gleichzeitigem "offen"-status blinkt grün schnell
+    // (dann liegt ein unzulässiger Zustand vor).
+
     // grün blinken, wenn Motor Richtung "auf"
     if (isMotorOpen)
       setLED(COL_GREEN, LED_SLOW);
     // grün, wenn komplett offen, sonst aus
-    else 
-      setLED(COL_GREEN, isFullyOpen() ? LED_ON : LED_OFF);
+    else if (isFullyOpen())
+      setLED(COL_GREEN, isFullyClosed() ? LED_FAST : LED_ON);
+//      setLED(COL_GREEN, isFullyClosed() ? LED_OFF : LED_ON);
+    else
+      setLED(COL_GREEN, LED_OFF);
     
     // rot blinken, wenn Motor Richtung "zu"
     if (isMotorClose)
       setLED(COL_RED, LED_SLOW);
     // rot, wenn komplett geschlossen, sonst aus
-    else 
-      setLED(COL_RED, isFullyClosed() ? LED_ON : LED_OFF);
+    else
+      setLED(COL_RED, isFullyClosed() ?  LED_ON : LED_OFF);
+  
+    
     
   } // while
   
