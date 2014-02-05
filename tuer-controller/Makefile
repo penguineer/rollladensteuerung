@@ -27,3 +27,6 @@ $(PROGRAM).hex: $(PROGRAM).c
 	avr-gcc $(CFLAGS) -c $(PROGRAM).c  -o $(PROGRAM).o
 	avr-gcc $(CFLAGS) $(PROGRAM).o usitwislave.o -o $(PROGRAM).elf
 	avr-objcopy -R .eeprom -O ihex $(PROGRAM).elf $(PROGRAM).hex
+
+fuse:
+	avrdude -c $(PROGRAMMER) -P usb -p t44 -U lfuse:w:0xe2:m -U hfuse:w:0xdc:m -U efuse:w:0xff:m 
