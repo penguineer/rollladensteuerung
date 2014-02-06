@@ -37,9 +37,8 @@
 
 
 /// Status Light Functions
-//TODO eventuell sind die auf dem Board anders herum aufgelötet O:)
 #define isStatusRed   (((PINB & (1<<PB2)) == (1<<PB2)) ? 1 : 0)
-#define isStatusGreen (((PINB & (1<<PB3)) == (1<<PB3)) ? 1 : 0)
+#define isStatusGreen (((PINB & (1<<PB1)) == (1<<PB1)) ? 1 : 0)
 
 inline void setStatusRed() {
   setPortB(1<<PB2);
@@ -67,18 +66,19 @@ inline void resetStatusGreen() {
 #define DOOR_OPEN  1
 #define DOOR_CLOSE 2
 inline void setDoorCommand(const char st) {
+  // Tür-Commands sind Low-Active!
   switch (st) {
     case DOOR_NONE: {
-      resetPortA(1<<PA2);
-      resetPortA(1<<PA3);
-    }; break;
-    case DOOR_OPEN: {
-      resetPortA(1<<PA2);
+      setPortA(1<<PA2);
       setPortA(1<<PA3);
     }; break;
-    case DOOR_CLOSE: {
-      resetPortA(1<<PA3);
+    case DOOR_OPEN: {
       setPortA(1<<PA2);
+      resetPortA(1<<PA3);
+    }; break;
+    case DOOR_CLOSE: {
+      setPortA(1<<PA3);
+      resetPortA(1<<PA2);
     }; break;
   }
 }
@@ -225,9 +225,9 @@ void init(void) {
    *   PA6:     I2C SDA
    *   PA7: IN  Input Pause
    */
-  DDRA  = 0b00001100;
-  // PullUp für Eingänge
-  PORTA = 0b00000000;
+  DDRA  = 0b11110011;
+  // PullUp für Eingänge, bzw pre-set für Ausgänge
+  PORTA = 0b00001100;
 
   /*
    * Pin-Config PortB:
@@ -236,7 +236,7 @@ void init(void) {
    *   PB2: OUT Status LED
    *   PB3: RESET
    */
-  DDRB  = 0b1111001;
+  DDRB  = 0b0000110;
   // PullUp für Eingänge
   PORTB = 0b00000000;
 
@@ -285,6 +285,18 @@ int main(void)
 /// Timer: Status Light
 volatile uint16_t status_blink = 0;
 void checkStatusLight() {
+/*    if (status_blink)
+      status_blink--;
+  
+    if (!status_blink ) {
+      if (isStatusGreen)
+	resetStatusGreen();
+      else
+	setStatusGreen();
+
+      status_blink = 3000;
+    }
+  */  
   //TODO an vorliegende Infrastruktur anpassen
 /*  // blink
   if ( OSB_HAS_STATUS(OSB_Status_Blink) ) {
@@ -352,7 +364,7 @@ ISR (TIM0_OVF_vect)
   cli();
   
   dechatterSwitches();
-  checkStatusLight();
+  //checkStatusLight();
   
   // restore state
   SREG = _sreg;
