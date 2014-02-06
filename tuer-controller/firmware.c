@@ -66,8 +66,11 @@ inline void resetStatusGreen() {
 #define DOOR_OPEN  1
 #define DOOR_CLOSE 2
 inline void setDoorCommand(const char st) {
+  resetStatusRed();
+  resetStatusGreen();
+
   // Tür-Commands sind Low-Active!
-  switch (st) {
+  switch (st) {    
     case DOOR_NONE: {
       setPortA(1<<PA2);
       setPortA(1<<PA3);
@@ -75,10 +78,12 @@ inline void setDoorCommand(const char st) {
     case DOOR_OPEN: {
       setPortA(1<<PA2);
       resetPortA(1<<PA3);
+      setStatusGreen();
     }; break;
     case DOOR_CLOSE: {
       setPortA(1<<PA3);
       resetPortA(1<<PA2);
+      setStatusRed();
     }; break;
   }
 }
@@ -140,6 +145,12 @@ inline uint8_t i3c_state() {
  * 
  * command (CCCC)
  * data (DDDD)
+ * 
+ * für Debug-Ansteuerung:
+ * CMD_RESET       (I²C 00)
+ * CMD_OPEN        (I²C 90)
+ * CMD_CLOSE       (I²C A0)
+ * CMD_STATE       (I²C 30)
  */
 #define CMD_RESET       0x00
 #define CMD_OPEN        0x01
@@ -155,7 +166,7 @@ static void twi_callback(uint8_t buffer_size,
   if (input_buffer_length) {
     const char parity = (input_buffer[0] & 0x80) >> 7;
     const char cmd  = (input_buffer[0] & 0x70) >> 4;
-    const char data = input_buffer[0] & 0x0F;
+    //const char data = input_buffer[0] & 0x0F;
     
     // check parity
     char v = input_buffer[0] & 0x7F;
@@ -225,7 +236,7 @@ void init(void) {
    *   PA6:     I2C SDA
    *   PA7: IN  Input Pause
    */
-  DDRA  = 0b11110011;
+  DDRA  = 0b00001100;
   // PullUp für Eingänge, bzw pre-set für Ausgänge
   PORTA = 0b00001100;
 
@@ -236,7 +247,7 @@ void init(void) {
    *   PB2: OUT Status LED
    *   PB3: RESET
    */
-  DDRB  = 0b0000110;
+  DDRB  = 0b00000110;
   // PullUp für Eingänge
   PORTB = 0b00000000;
 
