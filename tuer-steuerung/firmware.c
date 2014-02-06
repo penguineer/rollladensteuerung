@@ -296,7 +296,7 @@ int main(void)
     }
     else if (isSetClose) {
       startMotor(MOTOR_CLOSE);
-    } else {
+    } else if (!isDoorClosed && !isFullyOpen) {
       // bei unklarem Status: tür auf
       startMotor(MOTOR_OPEN);
     }
