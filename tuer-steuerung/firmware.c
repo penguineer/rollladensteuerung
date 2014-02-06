@@ -287,20 +287,43 @@ int main(void)
   while(1) {
     checkMotor();
 
-    if (isSetOpen) {
+    // bei offener Tür immer auch das Schloss öffnen!
+    if (!isDoorClosed && !isFullyOpen()) {
+      startMotor(MOTOR_OPEN);
+    }
+    else if (isSetOpen) {
       startMotor(MOTOR_OPEN);
     }
     else if (isSetClose) {
       startMotor(MOTOR_CLOSE);
-    }
-    else {
-      stopMotor();
+    } else {
+      // bei unklarem Status: tür auf
+      startMotor(MOTOR_OPEN);
     }
   
-    // grün, wenn komplett offen
-    setLED(COL_GREEN, isFullyOpen() ? LED_ON : LED_OFF);
-    // rot, wenn komplett geschlossen
-    setLED(COL_RED, isFullyClosed() ? LED_ON : LED_OFF);
+    // Es wird nur einer der Stati rot/grün angezeigt, 
+    // wenn die Tür "geschlossen" signalisiert, wird rot bevorzugt,
+    // bei gleichzeitigem "offen"-status blinkt grün schnell
+    // (dann liegt ein unzulässiger Zustand vor).
+
+    // grün blinken, wenn Motor Richtung "auf"
+    if (isMotorOpen)
+      setLED(COL_GREEN, LED_SLOW);
+    // grün, wenn komplett offen, sonst aus
+    else if (isFullyOpen())
+      setLED(COL_GREEN, isFullyClosed() ? LED_FAST : LED_ON);
+//      setLED(COL_GREEN, isFullyClosed() ? LED_OFF : LED_ON);
+    else
+      setLED(COL_GREEN, LED_OFF);
+    
+    // rot blinken, wenn Motor Richtung "zu"
+    if (isMotorClose)
+      setLED(COL_RED, LED_SLOW);
+    // rot, wenn komplett geschlossen, sonst aus
+    else
+      setLED(COL_RED, isFullyClosed() ?  LED_ON : LED_OFF);
+  
+    
     
   } // while
   
@@ -350,12 +373,12 @@ ISR (TIMER1_COMPA_vect)
 
     if (rst == LED_SLOW)
       color(COL_RED, phase>1);
-    if (rst == LED_FAST)
+    else if (rst == LED_FAST)
       color(COL_RED, phase%2);
   
     if (gst == LED_SLOW)
       color(COL_GREEN, phase>1);
-    if (gst == LED_FAST)
+    else if (gst == LED_FAST)
       color(COL_GREEN, phase%2);
   } // blink
 
