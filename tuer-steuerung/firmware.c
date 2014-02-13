@@ -51,6 +51,12 @@
 #define isMotorOpen      (((PINC & (1<<PC2)) == (1<<PC2)) ? 1 : 0)
 #define isMotorClose     (((PINC & (1<<PC3)) == (1<<PC3)) ? 1 : 0)
 
+/*
+ * Block-Counter für den Motor.
+ * Wird vom Timer decrementiert. Nur wenn == 0 kann das Schloss abgeschlossen
+ * werden.
+ */
+static char isBlocked = 0;
 
 /*
  * Motor anhalten!
@@ -61,6 +67,13 @@ void stopMotor() {
   // -> Enable 250ms später löschen
   _delay_ms(250);
   resetPortC((1 << PC1));
+}
+
+/*
+ * Motor für einen bestimmten Zeitraum blockieren.
+ */
+void blockMotor() {
+  isBlocked = 100;
 }
 
 /*
@@ -77,7 +90,7 @@ void checkMotor() {
   // Fall: Motor "zu"
   if (isMotorClose) {
     // schließen nur bei geschlossener Tür
-    if (!isDoorClosed)
+    if (!isDoorClosed || isBlocked)
       stopMotor();
     
     // Motor darf nur "zu" drehen, wenn der Zu-Endstop nicht erreicht ist
@@ -101,7 +114,7 @@ void startMotor(const char direction) {
   // Motor Close
   if (direction == MOTOR_CLOSE) {
     // endstop close darf nicht aktiv sein, Schloss muss offen sein und Tür muss geschlossen sein
-    if (!isEndstopClose && isLockOpen && isDoorClosed) {
+    if (!isEndstopClose && isLockOpen && isDoorClosed && !isBlocked) {
       // Richtung einstellen
       resetPortC(1 << PC2);
       setPortC(1 << PC3);
@@ -290,6 +303,7 @@ int main(void)
     // bei offener Tür immer auch das Schloss öffnen!
     if (!isDoorClosed && !isFullyOpen()) {
       startMotor(MOTOR_OPEN);
+      blockMotor();
     }
     else if (isSetOpen) {
       startMotor(MOTOR_OPEN);
@@ -341,13 +355,17 @@ ISR (TIMER1_COMPA_vect)
   // store state and disable interrupts
   const uint8_t _sreg = SREG;
   cli();
+  
+  // decrease the motor block counter
+  if ((isBlocked > 0) && isDoorClosed)
+    isBlocked--;
 
   // another motor check here
   checkMotor();
   
   // LED setting
 
-    // red led
+  // red led
   const char rst = GET_RED;
   
   if (rst == LED_ON)
