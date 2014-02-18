@@ -4,6 +4,7 @@
 #include <unistd.h>
 
 #include <time.h>
+#include <syslog.h>
 
 #include <wiringPi.h>
 #include <wiringPiI2C.h>
@@ -47,7 +48,7 @@ struct I2C_descriptors {
 int I2C_setup_fd(const int addr) {
   const int fd = wiringPiI2CSetup(addr);
   if (!fd) {
-    printf("Error %d on I2C initialization!", errno);
+    syslog(LOG_EMERG, "Error %d on I2C initialization!", errno);
     exit(-1);
   }
   return fd;
@@ -114,7 +115,7 @@ int I2C_command(const int fd, const char command, const char data) {
   }
   
   if (!hops)
-    printf("Giving up transmission!\n");
+    syslog(LOG_DEBUG, "Giving up transmission!\n");
   
   return result.c[0];
 }
@@ -230,8 +231,8 @@ char set_shutter_state(const char idx, const char state) {
     case SHUTTER_UP:   command = 0x2; break;
     case SHUTTER_DOWN: command = 0x3; break;
     default: {
-      printf("set_shutter_state: Unknown shutter state: %d.");
-      printf("This cannot happen!");
+      syslog(LOG_EMERG, "set_shutter_state: Unknown shutter state: %d.");
+      syslog(LOG_EMERG, "This cannot happen! Aborting with assertion error.");
       exit(-1);
     }
   }
@@ -306,7 +307,7 @@ void adjust_switch_state(const char idx, const char state) {
     if ((state != SWITCH_NEUTRAL) &&
         (switch_state[idx-1] == state) &&
         (lastchange > delay)) {
-        printf("Locking %d.\n", idx);
+        syslog(LOG_NOTICE, "Locking %d.\n", idx);
         beep(0x1);
         return;
     }
@@ -319,11 +320,11 @@ void adjust_switch_state(const char idx, const char state) {
   if (st) {
     // if locked, just turn off
     if (lastchange > delay) {
-      printf("Shutting %d off.\n", idx);
+      syslog(LOG_NOTICE, "Shutting %d off.\n", idx);
       set_shutter_state(idx, SHUTTER_OFF);
       store_switch_state(idx, SWITCH_NEUTRAL);
     } else {
-      printf("Changing switch state for %d to %d.\n", idx, state);
+      syslog(LOG_NOTICE, "Changing switch state for %d to %d.\n", idx, state);
     
       // commit the action only if the state has changed.
       switch (state) {
@@ -337,6 +338,10 @@ void adjust_switch_state(const char idx, const char state) {
 
 
 int main(int argc, char *argv[]) {
+  // initialize the system logging
+  openlog("shuttercontrol", LOG_CONS | LOG_PID, LOG_USER);
+  syslog(LOG_INFO, "Starting shuttercontrol.");
+
   I2C_init();
   stop_all_shutters();
   clear_stored_switch_state();
@@ -347,6 +352,9 @@ int main(int argc, char *argv[]) {
   
   // stored manual mode
   char manual_ = get_manual_mode();
+  syslog(LOG_NOTICE, "Manual mode is %s", 
+                    (manual_==1)?"on":"off");
+
   
   char run=1;
   int i=0;
@@ -360,13 +368,15 @@ int main(int argc, char *argv[]) {
     
     // if the manual mode has been toggled:
     if (manual_ != manual) {
-      printf("Manual switch state changed.\n");
+      syslog(LOG_NOTICE, "Manual switch state changed to %s", 
+                         (manual==1)?"on":"off");
+                         
       // toggle door state
       if (door_locked) {
-        printf("Opening door.\n");
+        syslog(LOG_NOTICE, "Opening door.");
         door_open();
       } else {
-        printf("Closing door.\n");
+        syslog(LOG_NOTICE, "Closing door.");
         door_close();
       }
         
@@ -394,6 +404,9 @@ int main(int argc, char *argv[]) {
   }
 
   stop_all_shutters();
+
+  syslog(LOG_INFO, "Shuttercontrol finished.");
+  closelog();
     
   return 0;
 }
