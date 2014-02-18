@@ -10,6 +10,7 @@
 
 #define I2C_ADDR_CONTROLLER 0x21
 #define I2C_ADDR_MANUAL     0x22
+#define I2C_ADDR_DOOR       0x24
 
 /**
  * Get the milliseconds since epoch.
@@ -29,10 +30,12 @@ long current_millis() {
 struct I2C_descriptors {
   int controller;
   int manual;
+  int door;
 } I2C_fd;
 
 #define I2C_FD_CONTROLLER (I2C_fd.controller)
 #define I2C_FD_MANUAL     (I2C_fd.manual)
+#define I2C_FD_DOOR       (I2C_fd.door)
 
 /**
   * Initialize an I2C channel to the specified address. Exits with an error
@@ -55,7 +58,8 @@ int I2C_setup_fd(const int addr) {
   */
 void I2C_init(void) {
   I2C_fd.controller = I2C_setup_fd(I2C_ADDR_CONTROLLER);
-  I2C_fd.manual = I2C_setup_fd(I2C_ADDR_MANUAL);
+  I2C_fd.manual     = I2C_setup_fd(I2C_ADDR_MANUAL);
+  I2C_fd.door       = I2C_setup_fd(I2C_ADDR_DOOR);
 }
 
 #define I2C_ERR_INVALIDARGUMENT -2
@@ -119,6 +123,22 @@ int I2C_command(const int fd, const char command, const char data) {
 
 void I3C_reset_manual() {
   I2C_command(I2C_FD_MANUAL, 0x4, 0x0);
+}
+
+///// Door Control Unit /////
+
+void door_open() {
+  I2C_command(I2C_FD_DOOR, 0x1, 0x0);
+}
+
+void door_close() {
+  I2C_command(I2C_FD_DOOR, 0x2, 0x0);
+}
+
+char door_is_locked() {
+  const char state = I2C_command(I2C_FD_DOOR, 0x3, 0x0);
+  
+  return ((state & 0x4) == 0x4) ? 0 : 1;
 }
 
 ///// Manual Controll unit /////
@@ -325,6 +345,9 @@ int main(int argc, char *argv[]) {
   sleep(1);
   set_manual_mode_led(LED_PATTERN_OFF);
   
+  // stored manual mode
+  char manual_ = get_manual_mode();
+  
   char run=1;
   int i=0;
   while(run) {
@@ -332,7 +355,27 @@ int main(int argc, char *argv[]) {
 
     const char manual = get_manual_mode();
     printf("Manual mode: %s\n", (manual==1)?"on":"off");
-    if (manual == MANUAL_MODE_ON)
+    const char door_locked = door_is_locked();
+    printf("Door is %slocked.\n", (door_locked==1)?"":"not ");
+    
+    // if the manual mode has been toggled:
+    if (manual_ != manual) {
+      printf("Manual switch state changed.\n");
+      // toggle door state
+      if (door_locked) {
+        printf("Opening door.\n");
+        door_open();
+      } else {
+        printf("Closing door.\n");
+        door_close();
+      }
+        
+      // store new manual state
+      manual_ = manual;
+    }
+    
+    //if (manual == MANUAL_MODE_ON)
+    if (door_locked)
       set_manual_mode_led(LED_PATTERN_ON);
     else
       set_manual_mode_led(LED_PATTERN_OFF);
