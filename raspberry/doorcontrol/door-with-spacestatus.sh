@@ -40,6 +40,7 @@ while [[ true ]]; do
 	# if unlocked
 	if [ "$s" == "0x0c" ]; then
 		echo "Door is unlocked."
+		logger -t shuttercontrol [Lock Failsafe] SpaceTime observation engaged.
 	
 		# check space status
 		isopen=''
@@ -52,12 +53,13 @@ while [[ true ]]; do
 			
 			
 			# if closed, decement timeout
-			if [ "$isopen" == "false" ]; then
-				echo "$timeout seconds remaining until door is locked."
-				let "timeout=$timeout-$DELAY"
-			else
+			if [ "$isopen" == "true" ]; then
 				timeout=$timeout
 				echo "SpaceTime active, timeout reset."
+			else
+				echo -n "No active SpaceTime detected. "
+				echo "$timeout seconds remaining until door is locked."
+				let "timeout=$timeout-$DELAY"
 			fi
 			
 			sleep $DELAY
@@ -65,6 +67,7 @@ while [[ true ]]; do
 		
 		# now it is closed -> close the door
 		echo "Closing door since SpaceStatus is closed!"
+		logger -t shuttercontrol [Lock Failsafe] Closing door due to SpaceTime status.
 		./door-close.sh
 		
 		# give the door some time to close
