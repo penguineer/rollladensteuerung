@@ -1,5 +1,8 @@
 #!/bin/bash
 
+caller=$(ps -ocommand= -p $PPID)
+logger -t shuttercontrol Opening door from shell script via $caller.
+
 gpio load i2c
 
 ret=""
