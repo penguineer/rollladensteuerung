@@ -32,6 +32,17 @@ function space_is_open {
 	echo "$isopen"
 }
 
+function i2c_set {
+	local addr=$1
+	local cmd=$2
+
+	ret=""
+	while [[ "$ret" != "0x01" ]]; do
+		ret=$(/usr/sbin/i2cget -y 1 $addr $cmd)
+		echo $ret
+	done
+}
+
 TIMEOUT=30
 DELAY=5
 
@@ -61,7 +72,7 @@ while [[ true ]]; do
 			if [ "$isopen" == "true" ]; then
 				if [ "$timeout" -lt "$TIMEOUT" ]; then
 					# blink off
-					i2cset -y 1 0x22 0xa0
+					i2c_set 0x22 0xa0
 				fi
 
 				timeout=$TIMEOUT
@@ -71,8 +82,8 @@ while [[ true ]]; do
 				echo "$timeout seconds remaining until door is locked."
 				let "timeout=$timeout-$DELAY"
 				# slow blink and beep
-				i2cset -y 1 0x22 0x21
-				i2cset -y 1 0x22 0x12
+				i2c_set 0x22 0x21
+				i2c_set 0x22 0x12
 			fi
 			
 			sleep $DELAY
@@ -82,15 +93,15 @@ while [[ true ]]; do
 		echo "Closing door since SpaceStatus is closed!"
 		logger -t lockfailsafe Closing door due to inactive SpaceTime status.
 		# with fast blink and beep-beep
-		i2cset -y 1 0x22 0x22
-		i2cset -y 1 0x22 0x9a
+		i2c_set 0x22 0x22
+		i2c_set 0x22 0x9a
 		./door-close.sh
 		
 		# give the door some time to close
 		sleep 5
 	
 		# blink off
-		i2cset -y 1 0x22 0xa0	
+		i2c_set 0x22 0xa0	
 	fi # unlocked
 
 	sleep 2
