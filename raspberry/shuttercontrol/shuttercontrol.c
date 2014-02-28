@@ -385,10 +385,9 @@ int main(int argc, char *argv[]) {
     }
     
     //if (manual == MANUAL_MODE_ON)
-    if (door_locked)
-      set_manual_mode_led(LED_PATTERN_ON);
-    else
-      set_manual_mode_led(LED_PATTERN_OFF);
+    //  set_manual_mode_led(LED_PATTERN_ON);
+    //else
+    //  set_manual_mode_led(LED_PATTERN_OFF);
     
     int idx;
     for (idx=1; idx<5; idx++) {
