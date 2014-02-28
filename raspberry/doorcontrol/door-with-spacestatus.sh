@@ -59,10 +59,13 @@ while [[ true ]]; do
 			
 			# if closed, decement timeout
 			if [ "$isopen" == "true" ]; then
-				timeout=$timeout
+				if [ "$timeout" -lt "$TIMEOUT" ]; then
+					# blink off
+					i2cset -y 1 0x22 0xa0
+				fi
+
+				timeout=$TIMEOUT
 				echo "SpaceTime active, timeout reset."
-				# blink off
-				i2cset -y 1 0x22 0xa0
 			else
 				echo -n "No active SpaceTime detected. "
 				echo "$timeout seconds remaining until door is locked."

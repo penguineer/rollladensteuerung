@@ -354,7 +354,9 @@ int main(int argc, char *argv[]) {
   char manual_ = get_manual_mode();
   syslog(LOG_NOTICE, "Manual mode is %s", 
                     (manual_==1)?"on":"off");
-
+  // stored lock status
+  char locked_ = door_is_locked();
+  set_manual_mode_led(locked_?LED_PATTERN_ON:LED_PATTERN_OFF);
   
   char run=1;
   int i=0;
@@ -363,8 +365,24 @@ int main(int argc, char *argv[]) {
 
     const char manual = get_manual_mode();
     printf("Manual mode: %s\n", (manual==1)?"on":"off");
+
+    // set LED when locking state changes
+    // (do not touch otherwise to keep other notifications)
     const char door_locked = door_is_locked();
     printf("Door is %slocked.\n", (door_locked==1)?"":"not ");
+    if (door_locked != locked_) {
+      if (door_locked==1) {
+        set_manual_mode_led(LED_PATTERN_ON);
+        syslog(LOG_NOTICE, "Door state changed to locked.");
+      } else {
+        set_manual_mode_led(LED_PATTERN_OFF);
+        syslog(LOG_NOTICE, "Door state changed to unlocked.");
+      }
+      locked_ = door_locked;
+    }
+    // set LED for locked door in any case
+    if (door_locked)
+      set_manual_mode_led(LED_PATTERN_ON);
     
     // if the manual mode has been toggled:
     if (manual_ != manual) {
