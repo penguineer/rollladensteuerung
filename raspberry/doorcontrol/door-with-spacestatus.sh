@@ -35,6 +35,8 @@ function space_is_open {
 TIMEOUT=30
 DELAY=5
 
+logger -t shuttercontrol [Lock Failsafe] SpaceTime observation restarted with timeout ${TIMEOUT}s and a delay of ${DELAY}s.
+
 while [[ true ]]; do
 	# check the door status
 	s=$(./door-status.sh)
@@ -70,7 +72,7 @@ while [[ true ]]; do
 		
 		# now it is closed -> close the door
 		echo "Closing door since SpaceStatus is closed!"
-		logger -t shuttercontrol [Lock Failsafe] Closing door due to SpaceTime status.
+		logger -t shuttercontrol [Lock Failsafe] Closing door due to inactive SpaceTime status.
 		./door-close.sh
 		
 		# give the door some time to close
