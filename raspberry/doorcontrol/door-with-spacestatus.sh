@@ -61,10 +61,15 @@ while [[ true ]]; do
 			if [ "$isopen" == "true" ]; then
 				timeout=$timeout
 				echo "SpaceTime active, timeout reset."
+				# blink off
+				i2cset -y 1 0x22 0xa0
 			else
 				echo -n "No active SpaceTime detected. "
 				echo "$timeout seconds remaining until door is locked."
 				let "timeout=$timeout-$DELAY"
+				# slow blink and beep
+				i2cset -y 1 0x22 0x21
+				i2cset -y 1 0x22 0x12
 			fi
 			
 			sleep $DELAY
@@ -73,11 +78,16 @@ while [[ true ]]; do
 		# now it is closed -> close the door
 		echo "Closing door since SpaceStatus is closed!"
 		logger -t lockfailsafe Closing door due to inactive SpaceTime status.
+		# with fast blink and beep-beep
+		i2cset -y 1 0x22 0x22
+		i2cset -y 1 0x22 0x9a
 		./door-close.sh
 		
 		# give the door some time to close
-		sleep 10
-		
+		sleep 5
+	
+		# blink off
+		i2cset -y 1 0x22 0xa0	
 	fi # unlocked
 
 	sleep 2
