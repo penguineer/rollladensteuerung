@@ -15,7 +15,10 @@ function wait_for_status {
 }
 
 function jsonval {
-	temp=`echo $json | sed -e 's/\\\\\//\//g' -e 's/[{}]//g' | awk -v k="text" '{n=split($0,a,","); for (i=1; i<=n; i++) print a[i]}' | sed -e 's/\"\:\"/\|/g' -e 's/[\,]/ /g' -e 's/\"//g' | grep -w $prop`
+	temp=$(echo $json | sed -e 's/\\\\\//\//g' -e 's/[{}]//g' \
+	                  | awk -v k="text" '{n=split($0,a,","); for (i=1; i<=n; i++) print a[i]}' \
+	                  | sed -e 's/\"\:\"/\|/g' -e 's/[\,]/ /g' -e 's/\"//g' \
+	                  | grep -w $prop)
 	echo ${temp##*|}
 }
 
