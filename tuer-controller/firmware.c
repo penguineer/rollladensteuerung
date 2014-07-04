@@ -57,8 +57,8 @@ inline void resetStatusGreen() {
 }
 
 /// Extra input macros
-#define isForceOpen (((PINB & (1<<PB0)) == (1<<PB0)) ? 1 : 0)
-#define isPause     (((PINA & (1<<PA7)) == (1<<PA7)) ? 1 : 0)
+#define isForceOpen  (((PINB & (1<<PB0)) == (1<<PB0)) ? 1 : 0)
+#define isForceClose (((PINA & (1<<PA7)) == (1<<PA7)) ? 1 : 0)
 
 /// Door Communication
 
@@ -99,17 +99,17 @@ inline void setDoorCommand(const char st) {
  * Input Status Byte
  * +-----+----+----+----+----+
  * | 7-4 | 3  | 2  | 1  | 0  |
- * | res | DC | LO | PA | FO |
+ * | res | DC | LO | FC | FO |
  * +-----+----+----+----+----+
  * DC Door Closed
  * LO Lock Open
- * PA Pause
+ * FC Force Close
  * FO Force Open
  */
 char getInputs() {
   return (isDoorClosed << 3) |
          (isLockOpen   << 2) |
-         (isPause      << 1) |
+         (isForceClose << 1) |
          (isForceOpen);
 }
 
@@ -216,9 +216,13 @@ static void twi_idle_callback(void) {
   const uint8_t _sreg = SREG;
   cli();
 
-  // opening the door works instantly without consent of the controller
+  // changing the door state works instantly without the consent
+  // of an external operator
+  // opening the door has precendence
   if (isForceOpen)
     setDoorCommand(DOOR_OPEN);
+  else if (isForceClose)
+    setDoorCommand(DOOR_CLOSE);
   
   // restore state
   SREG = _sreg;
@@ -234,7 +238,7 @@ void init(void) {
    *   PA4:     I2C SDC
    *   PA5:     INT (out)
    *   PA6:     I2C SDA
-   *   PA7: IN  Input Pause
+   *   PA7: IN  Input Force Close
    */
   DDRA  = 0b00001100;
   // PullUp für Eingänge, bzw pre-set für Ausgänge
