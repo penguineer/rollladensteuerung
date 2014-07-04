@@ -291,7 +291,7 @@ int main(void)
   _delay_ms(500);
   
   // start TWI (I²C) slave mode
-  usi_twi_slave(0x24, 0, &twi_callback, &twi_idle_callback);
+  usi_twi_slave(0x23, 0, &twi_callback, &twi_idle_callback);
 
   return 0;
 }
