@@ -11,7 +11,7 @@
 
 #define I2C_ADDR_CONTROLLER 0x21
 #define I2C_ADDR_MANUAL     0x22
-#define I2C_ADDR_DOOR       0x24
+#define I2C_ADDR_DOOR       0x23
 
 /**
  * Get the milliseconds since epoch.
