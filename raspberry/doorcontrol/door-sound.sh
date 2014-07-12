@@ -16,21 +16,14 @@ function wait_for_status {
 
 while [[ true ]]; do
 	#wait for open door
-<<<<<<< HEAD
 	wait_for_status "0x04"
-=======
-	wait_for_status "0004"
->>>>>>> 5a3407d... door sound script
         echo "open"
 
         mpg123 /home/pi/tyr/sounds/`ls /home/pi/tyr/sounds | shuf -n1` &
 
 	#wait for closed door
-<<<<<<< HEAD
 	wait_for_status "0x0c"
-=======
-	wait_for_status "000c"
->>>>>>> 5a3407d... door sound script
-        echo "closed"
+
+	echo "closed"
         sleep 2
 done
