@@ -33,6 +33,9 @@ tail -fn0 $LOGFILE | while read line ; do
         	UFWRES=$(ufw deny from $IP to any)
         	echo $UFWRES
         	
+        	# cut the connection
+        	cutter $IP
+        	
         	logger -t $TAG "Adding block for IP $IP to ufw firewall. $UFWRES"
         	
         	# delete the IP content
