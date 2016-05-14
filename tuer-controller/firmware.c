@@ -23,6 +23,8 @@
 
 #include "usitwislave.h"
 
+#include "../debounce/debounce.h"
+
 // from http://www.rn-wissen.de/index.php/Inline-Assembler_in_avr-gcc#nop
 #define nop() \
    asm volatile ("nop")
