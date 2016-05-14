@@ -308,56 +308,6 @@ int main(void)
   return 0;
 }
 
-
-/// Timer: Status Light
-volatile uint16_t status_blink = 0;
-void checkStatusLight() {
-/*    if (status_blink)
-      status_blink--;
-  
-    if (!status_blink ) {
-      if (isStatusGreen)
-	resetStatusGreen();
-      else
-	setStatusGreen();
-
-      status_blink = 3000;
-    }
-  */  
-  //TODO an vorliegende Infrastruktur anpassen
-/*  // blink
-  if ( OSB_HAS_STATUS(OSB_Status_Blink) ) {
-    if (status_blink)
-      status_blink--;
-  
-    if (!status_blink ) {
-      if (isStatusGreen)
-	resetStatusGreen();
-      else
-	setStatusGreen();
-
-      if (isStatusRed)
-	resetStatusRed();
-      else
-	setStatusRed();
-
-      status_blink = 3000;
-    }
-  } else {
-    // green
-    if (OSB_HAS_STATUS(OSB_Status_Green))
-      setStatusGreen();
-    else
-      resetStatusGreen();
-    
-    // red
-    if (OSB_HAS_STATUS(OSB_Status_Red))
-      setStatusRed();
-    else
-      resetStatusRed();
-  }*/
-}
-
 /// Timer: Switches
 // nach http://www.mikrocontroller.net/articles/Entprellung#Softwareentprellung
 #define DECHATTER_COUNTER 50
@@ -391,7 +341,6 @@ ISR (TIM0_OVF_vect)
   cli();
   
   dechatterSwitches();
-  //checkStatusLight();
 
   // update the debounce histories
   debounce_update_button(&dbh_btnRed, PINA, PA7);
