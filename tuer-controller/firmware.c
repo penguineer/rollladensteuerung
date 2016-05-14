@@ -301,6 +301,18 @@ int main(void)
   _delay_ms(500);
   resetStatusGreen();
   _delay_ms(500);
+
+  /*
+   * Note: The above sequence generates a 2000ms pause, which should
+   *       allow the dechatter-histories to settle.
+   *
+   *       If the blinking should be removed, replace by an appropriate
+   *       sleep command!
+   */
+
+  /*
+   * The state machines are calculated in twi_idle_callback.
+   */
   
   // start TWI (I²C) slave mode
   usi_twi_slave(0x23, 0, &twi_callback, &twi_idle_callback);
