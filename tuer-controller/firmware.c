@@ -29,7 +29,11 @@
 #define nop() \
    asm volatile ("nop")
 
-
+// Define the debounce histories
+static uint8_t dbh_btnRed;
+static uint8_t dbh_btnGreen;
+static uint8_t dbh_sigDoorClosed;
+static uint8_t dbh_sigLockOpen;
   
 /// Port Helper Macros
 #define setPortA(mask)   (PORTA |= (mask))
@@ -231,6 +235,12 @@ static void twi_idle_callback(void) {
 }
 
 void init(void) {
+  // Init debounce histories
+  debounce_init_button(&dbh_btnRed);
+  debounce_init_button(&dbh_btnGreen);
+  debounce_init_button(&dbh_sigDoorClosed);
+  debounce_init_button(&dbh_sigLockOpen);
+
   /*
    * Pin-Config PortA:
    *   PA0: IN  Door State (1 == Closed)
@@ -382,6 +392,12 @@ ISR (TIM0_OVF_vect)
   
   dechatterSwitches();
   //checkStatusLight();
+
+  // update the debounce histories
+  debounce_update_button(&dbh_btnRed, PINA, PA7);
+  debounce_update_button(&dbh_btnGreen, PINB, PB0);
+  debounce_update_button(&dbh_sigDoorClosed, PINA, PA1);
+  debounce_update_button(&dbh_sigLockOpen, PINA, PA0);
   
   // restore state
   SREG = _sreg;
