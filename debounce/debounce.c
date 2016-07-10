@@ -63,10 +63,10 @@ bool debounce_is_button_released ( uint8_t *history )
 
 bool debounce_is_button_down ( uint8_t *history )
 {
-    return *history == 0b11111111;
+    return *history == 0b00000000;
 }
 
 bool debounce_is_button_up ( uint8_t *history )
 {
-    return *history == 0b00000000;
+    return *history == 0b11111111;
 }
