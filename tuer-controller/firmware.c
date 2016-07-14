@@ -20,6 +20,7 @@
 #include <util/delay.h>
 #include <util/twi.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "usitwislave.h"
 
@@ -29,12 +30,94 @@
 #define nop() \
    asm volatile ("nop")
 
-// Define the debounce histories
+// store interrupt state and disable
+#define store_SREG() \
+  const uint8_t _sreg = SREG; \
+  cli();
+
+// restore interrupt state and enable, if not disabled before
+#define restore_SREG() \
+  SREG = _sreg;
+
+
+/// Define the debounce histories
 static uint8_t dbh_btnRed;
 static uint8_t dbh_btnGreen;
-static uint8_t dbh_sigDoorClosed;
-static uint8_t dbh_sigLockOpen;
-  
+static uint8_t dbh_sigDoor;
+static uint8_t dbh_sigLock;
+
+
+/// State Handling Infrastructure
+/***
+ * Input Status Byte (ISB)
+ *
+ * +-----+----+----+----+----+----+----+
+ * | 7-6 | 5  | 4  | 3  | 2  | 1  | 0  |
+ * | res | GB | RB | DC | LO | FC | FO |
+ * +-----+----+----+----+----+----+----+
+ *
+ * GB Green Button active (Force-open door)
+ * RB Red Button active (Force-close door)
+ * DO Door Open
+ * LC Lock Closed
+ * FC Force Close
+ * FO Force Open
+ */
+static uint8_t inputStatusByte = 0;
+
+// ISB masks for setISB and clearISB
+#define ISB_GB (1 << 5)
+#define ISB_RB (1 << 4)
+#define ISB_DO (1 << 3)
+#define ISB_LC (1 << 2)
+#define ISB_FC (1 << 1)
+#define ISB_FO (1 << 0)
+
+inline void setISB(const uint8_t mask) {
+  inputStatusByte |= mask;
+}
+
+inline void clearISB(const uint8_t mask) {
+  inputStatusByte &= ~mask;
+}
+
+/**
+ * \return true iif all bits from mask are set in the ISB
+ */
+inline bool getMaskedISB(const uint8_t mask) {
+  return (inputStatusByte & mask) ? true : false;
+}
+
+inline uint8_t getInputStatusByte() {
+  return inputStatusByte;
+}
+
+void updateInputState(uint8_t *history, const uint8_t mask) {
+  if (debounce_is_button_pressed(history)
+      || debounce_is_button_down(history)) {
+    setISB(mask);
+  }
+  if (debounce_is_button_released(history)
+      || debounce_is_button_up(history)) {
+    clearISB(mask);
+  }
+}
+
+void waitForClearState(uint8_t *history, const uint8_t mask) {
+  bool stateOk = false;
+  while (!stateOk) {
+    if (debounce_is_button_down(history)) {
+      setISB(mask);
+      stateOk = true;
+    }
+    if (debounce_is_button_up(history)) {
+      clearISB(mask);
+      stateOk = true;
+    }
+  }
+}
+
+
 /// Port Helper Macros
 #define setPortA(mask)   (PORTA |= (mask))
 #define resetPortA(mask) (PORTA &= ~(mask))
@@ -62,82 +145,30 @@ inline void resetStatusGreen() {
    resetPortB(1<<PB1);
 }
 
-/// Extra input macros
-#define isForceOpen  (((PINB & (1<<PB0)) == (1<<PB0)) ? 1 : 0)
-#define isForceClose (((PINA & (1<<PA7)) == (1<<PA7)) ? 1 : 0)
-
-/// Door Communication
-
-#define DOOR_NONE  0
-#define DOOR_OPEN  1
-#define DOOR_CLOSE 2
-inline void setDoorCommand(const char st) {
-  resetStatusRed();
-  resetStatusGreen();
-
-  // Tür-Commands sind Low-Active!
-  switch (st) {    
-    case DOOR_NONE: {
-      setPortA(1<<PA2);
-      setPortA(1<<PA3);
-    }; break;
-    case DOOR_OPEN: {
-      setPortA(1<<PA2);
-      resetPortA(1<<PA3);
-      setStatusGreen();
-    }; break;
-    case DOOR_CLOSE: {
-      setPortA(1<<PA3);
-      resetPortA(1<<PA2);
-      setStatusRed();
-    }; break;
-  }
-}
-
-#define isCommandOpen  (((PINA & (1<<PA3)) == (1<<PA3)) ? 1 : 0)
-#define isCommandClose (((PINA & (1<<PA2)) == (1<<PA2)) ? 1 : 0)
-#define isDoorClosed   (((PINA & (1<<PA1)) == (1<<PA1)) ? 1 : 0)
-#define isLockOpen     (((PINA & (1<<PA0)) == (1<<PA0)) ? 1 : 0)
-
-
-/// State Handling Infrastructure
-/***
- * Input Status Byte
- * +-----+----+----+----+----+
- * | 7-4 | 3  | 2  | 1  | 0  |
- * | res | DC | LO | FC | FO |
- * +-----+----+----+----+----+
- * DC Door Closed
- * LO Lock Open
- * FC Force Close
- * FO Force Open
- */
-char getInputs() {
-  return (isDoorClosed << 3) |
-         (isLockOpen   << 2) |
-         (isForceClose << 1) |
-         (isForceOpen);
-}
-
-// Filled by the dechatter function (see interrupt functions below)
-uint8_t getInputState();
-
 
 /// I3C
 //flag state change
 inline void i3c_stateChange() {
+  store_SREG();
+
   // port A5 as output
   DDRA |= (1 << PA5);
   // set to low
   PORTA &= ~(1 << PA5);
+
+  restore_SREG();
 }
 
 // put to listening mode
 inline void i3c_tristate() {
+  store_SREG();
+
   // port A5 as input
   DDRA &= ~(1 << PA5);
   // no pull-up
   PORTA &= ~(1 << PA5);
+
+  restore_SREG();
 }
 
 inline uint8_t i3c_state() {
@@ -189,22 +220,30 @@ static void twi_callback(uint8_t buffer_size,
     switch (cmd) {
       // handle commands
       case CMD_RESET: {
-	setDoorCommand(DOOR_NONE);
+	// clear the force state
+	clearISB(ISB_FC | ISB_FO);
+
 	i3c_tristate();
 	output = 1;
       }; break;
       case CMD_OPEN: {
-	setDoorCommand(DOOR_OPEN);
+	// force door open
+	setISB(ISB_FO);
+	clearISB(ISB_FC);
+
 	output = 1;
       }; break;
       case CMD_CLOSE: {
+	// force door closed
 	// this may instantly overridden by a force-open input
-	setDoorCommand(DOOR_CLOSE);
+	setISB(ISB_FC);
+	clearISB(ISB_FO);
+
 	output = 1;
       }; break;
       case CMD_STATE: {
 	// move input state to data
-	output = getInputState();
+	output = getInputStatusByte();
 	// reset I³C interrupt
 	i3c_tristate();
       }; break;
@@ -214,43 +253,129 @@ static void twi_callback(uint8_t buffer_size,
     output_buffer[0] = output;
     output_buffer[1] = ~(output);
   }
-  
 }
+
+/**
+ * \brief update the ports based on the ISB
+ */
+void updatePorts() {
+  // Check if the door should be open (this case has precedence)
+  if (getMaskedISB(ISB_FO)) {
+      setPortA(1<<PA2);
+      resetPortA(1<<PA3);
+      setStatusGreen();
+      resetStatusRed();
+  }
+  // Check if door should be closed
+  else if (getMaskedISB(ISB_FC)) {
+      setPortA(1<<PA3);
+      resetPortA(1<<PA2);
+      setStatusRed();
+      resetStatusGreen();
+  }
+  // otherwise clear everything
+  else {
+      setPortA(1<<PA2);
+      setPortA(1<<PA3);
+      resetStatusRed();
+      resetStatusGreen();
+  }
+}
+
+/*
+ * Button update counter from the TMR0 ISR
+ *
+ * This counter enumerates the round-robin passes in the ISR.
+ */
+static uint8_t rrUpdateCounter = 0;
 
 static void twi_idle_callback(void) {
-  // store state and disable interrupts
-  const uint8_t _sreg = SREG;
-  cli();
+  // decide if the idle call should be executed
+  bool exec = false;
 
-  // changing the door state works instantly without the consent
-  // of an external operator
-  // opening the door has precendence
-  if (isForceOpen)
-    setDoorCommand(DOOR_OPEN);
-  else if (isForceClose)
-    setDoorCommand(DOOR_CLOSE);
-  
-  // restore state
-  SREG = _sreg;
+  {
+    store_SREG();
+
+    // evaluate the states only if there are at least two passes in the
+    // debounce round-robin
+    if (rrUpdateCounter >= 2) {
+      exec = true;
+      rrUpdateCounter = 0;
+    }
+
+    restore_SREG();
+  }
+
+  if (!exec)
+    return;
+
+
+  // store the old input state
+  const uint8_t oldISB = getInputStatusByte();
+
+  // set the ISB according to the debounce histories
+
+  // Green Button state
+  updateInputState(&dbh_btnGreen, ISB_GB);
+  // Red Button state
+  updateInputState(&dbh_btnRed, ISB_RB);
+  // Door-closed state
+  updateInputState(&dbh_sigDoor, ISB_DO);
+  // Lock-open state
+  updateInputState(&dbh_sigLock, ISB_LC);
+
+  /* With the following structure the buttons override subsequent
+    * commands that might be issued by the I2C master while the button
+    * is pressed. Only after a button-release event I2C commands will
+    * have an effect on the lock state.
+    */
+
+  /*
+    * Opening the door has precedence:
+    * 	The green button overrides the red button,
+    *   Force-open state overrides the force-close state.
+    * This way a user can always open the door.
+    */
+
+  // set the forced state based on button inputs
+  // changing the door state by buttons works instantly without
+  // the consent of an external application
+  if (getMaskedISB(ISB_GB)) {
+    // force open on green button press
+    setISB(ISB_FO);
+    clearISB(ISB_FC);
+  } else if (getMaskedISB(ISB_RB)) {
+    // force closed on red button press
+    setISB(ISB_FC);
+    clearISB(ISB_FO);
+  }
+
+  // Set outputs according to ISB
+  updatePorts();
+
+  // trigger a state change if the ISB has changed
+  if (getInputStatusByte() != oldISB)
+    i3c_stateChange();
 }
 
+/// Initialization
 void init(void) {
   // Init debounce histories
   debounce_init_button(&dbh_btnRed);
   debounce_init_button(&dbh_btnGreen);
-  debounce_init_button(&dbh_sigDoorClosed);
-  debounce_init_button(&dbh_sigLockOpen);
+  debounce_init_button(&dbh_sigDoor);
+  debounce_init_button(&dbh_sigLock);
 
   /*
    * Pin-Config PortA:
-   *   PA0: IN  Door State (1 == Closed)
-   *   PA1: IN  Lock State (1 == Open)
-   *   PA2: OUT Command Close
-   *   PA3: OUT Command Open
+   *   PA0: IN  Door State (0 == Closed)
+   *   PA1: IN  Lock State (0 == Open)
+   *   PA2: OUT Command Force-Close
+   *   PA3: OUT Command Force-Open
    *   PA4:     I2C SDC
    *   PA5:     INT (out)
    *   PA6:     I2C SDA
-   *   PA7: IN  Input Force Close
+   *   PA7: IN  Input Button Red Close
    */
   DDRA  = 0b00001100;
   // PullUp für Eingänge, bzw pre-set für Ausgänge
@@ -258,7 +383,7 @@ void init(void) {
 
   /*
    * Pin-Config PortB:
-   *   PB0: IN  Input Force Open
+   *   PB0: IN  Input Button Green Open
    *   PB1: OUT Status LED
    *   PB2: OUT Status LED
    *   PB3: RESET
@@ -276,7 +401,7 @@ void init(void) {
   // Do not connect the timer overflow with the I/O port
   TCCR0A = 0;
   // Set prescaler and start the timer
-  TCCR0B = (1 << CS01);
+  TCCR0B = (1 << CS02);
   // Enable timer overflow interrupt
   TIMSK0 |= (1 << TOIE0);
   TIFR0 |= (1 << TOV0);
@@ -286,6 +411,7 @@ void init(void) {
 }
 
 
+/// Main
 int main(void)
 {
   // initialisieren
@@ -311,6 +437,19 @@ int main(void)
    */
 
   /*
+   * Cold start: we need to find out the door and lock state, as
+   * they may have been set without us seeing the events.
+   */
+  waitForClearState(&dbh_sigDoor, ISB_DO);
+  waitForClearState(&dbh_sigLock, ISB_LC);
+
+  // set force state according to lock state
+  if (getMaskedISB(ISB_LC))
+    setISB(ISB_FO);
+  else
+    setISB(ISB_FC);
+
+  /*
    * The state machines are calculated in twi_idle_callback.
    */
   
@@ -320,47 +459,44 @@ int main(void)
   return 0;
 }
 
-/// Timer: Switches
-// nach http://www.mikrocontroller.net/articles/Entprellung#Softwareentprellung
-#define DECHATTER_COUNTER 50
 
-volatile uint8_t input_state = 0;
-uint8_t input_counter;
-
-void dechatterSwitches() {
-  uint8_t input = getInputs();
-  
-  if (input != input_state) {
-    input_counter--;
-    if (input_counter == 0) {
-      input_counter = DECHATTER_COUNTER;
-      input_state = input;
-      // note change on I³C
-      i3c_stateChange();
-    }
-  } else
-    input_counter = DECHATTER_COUNTER;
-}
-
-uint8_t getInputState() {
-  return input_state;
-}
-
+/// Interrupt handling
+// Round-Robin selector
+static uint8_t rrSelect = 0;
 ISR (TIM0_OVF_vect)
 {
-  // store state and disable interrupts
-  const uint8_t _sreg = SREG;
-  cli();
+  store_SREG();
   
-  dechatterSwitches();
+  /* update the debounce histories */
+  // round-robin the updates, that is still fast enough
+  // and otherwise the ISR gets clogged
+  ++rrSelect;
+  switch (rrSelect) {
+    case 1: {
+      // Green, door-open button
+      debounce_update_button(&dbh_btnGreen, PINB, PB0);
+    }; break;
+    case 2: {
+      // Red, door-close button
+      debounce_update_button(&dbh_btnRed, PINA, PA7);
+    }; break;
+    case 3: {
+      // door-is-closed signal
+      debounce_update_button(&dbh_sigDoor, PINA, PA1);
+    }; break;
+    case 4: {
+      // lock-is-open signal
+      debounce_update_button(&dbh_sigLock, PINA, PA0);
+    }; break;
+    default: {
+      rrSelect = 0;
+      // update the round-robin counter
+      ++rrUpdateCounter;
+    }
+  } // switch
 
-  // update the debounce histories
-  debounce_update_button(&dbh_btnRed, PINA, PA7);
-  debounce_update_button(&dbh_btnGreen, PINB, PB0);
-  debounce_update_button(&dbh_sigDoorClosed, PINA, PA1);
-  debounce_update_button(&dbh_sigLockOpen, PINA, PA0);
-  
-  // restore state
-  SREG = _sreg;
+  // Shorten the timer interrupt period
+  TCNT0 = 0x80;
+
+  restore_SREG();
 }
-
