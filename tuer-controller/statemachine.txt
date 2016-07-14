@@ -2,6 +2,9 @@
 | tuer-controller State Machine |
 +-------------------------------+
 
+NOTE: This is a preliminary documentation. The firmare uses a shorter
+      implementation and changed the interpretations of the door and
+      lock signals to meet the requirements of the debounce library.
 
 Inputs:
 
