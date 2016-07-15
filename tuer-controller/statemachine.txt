@@ -1,0 +1,54 @@
++-------------------------------+
+| tuer-controller State Machine |
++-------------------------------+
+
+NOTE: This is a preliminary documentation. The firmare uses a shorter
+      implementation and changed the interpretations of the door and
+      lock signals to meet the requirements of the debounce library.
+
+Inputs:
+
+* push button Red:  	Lock Door
+* push button Green:	Unlock Door
+* signal Door Closed:	door-close sense switch
+* signal Lock Open:	lock-open sense switch
+* command Reset:	Reset the controller
+* command Open:		Unlock the door
+* command Close:	Lock the door
+* command State:	Get the currently known state
+
+Outputs:
+* signal force-close:	Force-close the door
+* signal force-open:	Force-open  the door
+* LED Red:		Force-close Lock Action state
+* LED Green:		Force-open  Lock Action state
+* command State:	Respond with state byte
+
+Lock Action states:
+* Lock state unknown
+    Active when a statement about the door state cannot be made and the
+    controller does not enforce a specific state. This may be the case
+    after a reset.
+* Lock state force-open
+    Signal the lock-open command.
+* Lock state force-close
+    Signal the lock-close command.
+
+Lock states:
+* state is unknown
+* Lock is open
+* Lock is closed
+
+Lock History states:
+* no lock history
+* Lock-open event triggered
+* Lock-closed event triggered
+
+Door states:
+* state is unknown
+* Door is open
+* Door is closed
+
+Door History states:
+* Door was opened
+* Door was closed
