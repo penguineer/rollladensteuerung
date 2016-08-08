@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
+#include <string.h>
 
 #include <time.h>
 #include <syslog.h>
@@ -12,7 +13,20 @@
 #include <wiringPi.h>
 #include <wiringPiI2C.h>
 
+#include <mosquitto.h>
+
 #define I2C_ADDR_DOORCTRL   0x23
+
+const char* MQTT_HOST 	= "platon";
+const int   MQTT_PORT 	= 1883;
+const char* MQTT_TOPIC 	= "Netz39/Things/Door/Events";
+
+#define MQTT_MSG_MAXLEN		  16
+const char* MQTT_MSG_DOOROPEN   = "door open";
+const char* MQTT_MSG_DOORCLOSE  = "door closed";
+const char* MQTT_MSG_LOCKOPEN   = "door unlocked";
+const char* MQTT_MSG_LOCKCLOSE  = "door locked";
+const char* MQTT_MSG_NONE	= "none";
 
 struct door_status_t {
   bool green_active;	// Green Button active
@@ -165,8 +179,33 @@ int main(int argc, char *argv[]) {
   // initialize I2C
   I2C_init();
   
-  // TODO initialize MQTT
-
+  // initialize MQTT
+  mosquitto_lib_init();
+  
+  void *mqtt_obj;
+  struct mosquitto *mosq;
+  mosq = mosquitto_new("doorstate", true, mqtt_obj);
+  if ((int)mosq == ENOMEM) {
+    syslog(LOG_ERR, "Not enough memory to create a new mosquitto session.");
+    mosq = NULL;
+  }
+  if ((int)mosq == EINVAL) {
+    syslog(LOG_ERR, "Invalid values for creating mosquitto session.");
+    return -1;
+  }
+  
+  if (mosq) {
+    int ret;
+    
+    ret = mosquitto_connect(mosq, MQTT_HOST, MQTT_PORT, 30);
+    if (ret == MOSQ_ERR_SUCCESS)
+      syslog(LOG_INFO, "MQTT connection to %s established.", MQTT_HOST);
+      
+    // TODO error handling
+  }
+  
+  char mqtt_payload[MQTT_MSG_MAXLEN];
+  
   // the known door status
   struct door_status_t before; 
   decode_door_status(doorctrl_read_status(), &before);
@@ -190,15 +229,18 @@ int main(int argc, char *argv[]) {
     printf("\n");
 
     // Check door status for changes and emit MQTT messages
+    mqtt_payload[0] = 0;
 
     // door status changed
     if (before.door_closed != ds.door_closed) {
       if (ds.door_closed) {
         syslog(LOG_INFO, "Door has been closed.");
-        //TODO MQTT message
+        //MQTT message
+        strcpy(mqtt_payload, MQTT_MSG_DOORCLOSE);
       } else {
         syslog(LOG_INFO, "Door has been opened.");
-        //TODO MQTT message
+        //MQTT message
+        strcpy(mqtt_payload, MQTT_MSG_DOOROPEN);
       }
       
       before.door_closed = ds.door_closed;
@@ -208,21 +250,56 @@ int main(int argc, char *argv[]) {
     if (before.lock_open != ds.lock_open) {
       if (ds.lock_open) {
         syslog(LOG_INFO, "Door has been unlocked.");
-        //TODO MQTT message
+        //MQTT message
+        strcpy(mqtt_payload, MQTT_MSG_LOCKOPEN);
       } else {
         syslog(LOG_INFO, "Door has been locked.");
-        //TODO MQTT message      
+        //MQTT message
+        strcpy(mqtt_payload, MQTT_MSG_LOCKCLOSE);
       }
       
       before.lock_open = ds.lock_open;
     }
     
+    // send MQTT message if there is payload
+    if (mqtt_payload[0] && mosq) {
+      int ret;
+      int mid;
+      ret = mosquitto_publish(
+                        mosq, 
+                        &mid,
+                        MQTT_TOPIC,
+                        strlen(mqtt_payload), mqtt_payload,
+                        2, /* qos */
+                        true /* retain */
+                       );
+      if (ret != MOSQ_ERR_SUCCESS)
+        syslog(LOG_ERR, "MQTT error on message \"%s\": %d (%s)", 
+                        mqtt_payload, 
+                        ret,
+                        mosquitto_strerror(ret));
+      else
+        syslog(LOG_INFO, "MQTT message \"%s\" sent with id %d.", 
+                         mqtt_payload, mid);
+    }
+    
+    // call the mosquitto loop to process messages
+    if (mosq)
+      mosquitto_loop(mosq, 100, 1);
+    
 
-    I3C_reset_doorctrl();
+    //I3C_reset_doorctrl();
     
     if (sleep(1)) 
       break;
   }
+
+  // clean-up MQTT
+  if (mosq) {
+    mosquitto_disconnect(mosq);
+    mosquitto_destroy(mosq);
+  }
+  mosquitto_lib_cleanup();
 
   syslog(LOG_INFO, "Doorstate observer finished.");
   closelog();
