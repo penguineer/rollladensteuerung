@@ -5,7 +5,7 @@ gpio write 4 1
 
 sleep 2
 
-gpio load i2c
+#gpio load i2c
 ./shuttercontrol
 
 gpio write 4 0

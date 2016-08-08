@@ -1,7 +1,5 @@
 #!/bin/bash
 
-gpio load i2c
-
 
 ret=""
 while [[ "$ret" != "0x01" ]]; do

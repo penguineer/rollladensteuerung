@@ -16,13 +16,13 @@ function wait_for_status {
 
 while [[ true ]]; do
 	#wait for open door
-	wait_for_status "0x04"
+	wait_for_status "0x05"
         echo "open"
 
         mpg123 /home/pi/tyr/sounds/`ls /home/pi/tyr/sounds | shuf -n1` &
 
 	#wait for closed door
-	wait_for_status "0x0c"
+	wait_for_status "0x0d"
 
 	echo "closed"
         sleep 2
