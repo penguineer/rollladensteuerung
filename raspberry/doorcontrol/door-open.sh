@@ -3,8 +3,6 @@
 caller=$(ps -ocommand= -p $PPID)
 logger -t shuttercontrol "Opening door from shell script via $caller."
 
-gpio load i2c
-
 ret=""
 errcount=0
 while [[ "$ret" != "0x01" ]]; do

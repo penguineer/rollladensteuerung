@@ -54,7 +54,7 @@ while [[ true ]]; do
 	echo "Door state: $s"
 	
 	# if unlocked
-	if [ "$s" == "0x0c" ]; then
+	if [ "$s" == "0x0d" ]; then
 		echo "Door is unlocked."
 		logger -t lockfailsafe SpaceTime observation engaged.
 	
