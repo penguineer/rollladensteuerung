@@ -284,9 +284,13 @@ int main(int argc, char *argv[]) {
     }
     
     // call the mosquitto loop to process messages
-    if (mosq)
-      mosquitto_loop(mosq, 100, 1);
-    
+    if (mosq) {
+      int ret;
+      ret = mosquitto_loop(mosq, 100, 1);
+      // if failed, try to reconnect
+      if (ret)
+        mosquitto_reconnect(mosq);
+    }
 
     //I3C_reset_doorctrl();
     
