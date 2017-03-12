@@ -9,8 +9,13 @@
 #include <wiringPi.h>
 #include <wiringPiI2C.h>
 
+#include <mosquitto.h>
+
 #define I2C_ADDR_CONTROLLER 0x21
 #define I2C_ADDR_MANUAL     0x22
+
+const char* MQTT_HOST   = "platon";
+const int   MQTT_PORT   = 1883;
 
 /**
  * Get the milliseconds since epoch.
@@ -329,6 +334,31 @@ int main(int argc, char *argv[]) {
   set_manual_mode_led(LED_PATTERN_FAST);
   sleep(1);
   set_manual_mode_led(LED_PATTERN_OFF);
+ 
+  // initialize MQTT   
+  mosquitto_lib_init();
+  
+  void *mqtt_obj;
+  struct mosquitto *mosq;
+  mosq = mosquitto_new("shuttercontrol", true, mqtt_obj);
+  if ((int)mosq == ENOMEM) {
+    syslog(LOG_ERR, "Not enough memory to create a new mosquitto session.");
+    mosq = NULL;
+  }
+  if ((int)mosq == EINVAL) {
+    syslog(LOG_ERR, "Invalid values for creating mosquitto session.");
+    return -1;
+  }
+
+  if (mosq) {
+    int ret; 
+    
+    ret = mosquitto_connect(mosq, MQTT_HOST, MQTT_PORT, 30);
+    if (ret == MOSQ_ERR_SUCCESS)
+      syslog(LOG_INFO, "MQTT connection to %s established.", MQTT_HOST);
+      
+    // TODO error handling
+  }
   
   char run=1;
   int i=0;
@@ -352,11 +382,29 @@ int main(int argc, char *argv[]) {
     }
 
     I3C_reset_manual();
+
+    // call the mosquitto loop to process messages
+    if (mosq) {
+      int ret; 
+      ret = mosquitto_loop(mosq, 100, 1);
+      // if failed, try to reconnect
+      if (ret)
+        mosquitto_reconnect(mosq);
+    }
+
     if (sleep(1)) 
       break;
   }
 
   stop_all_shutters();
+
+  // clean-up MQTT
+  if (mosq) {
+    mosquitto_disconnect(mosq);
+    mosquitto_destroy(mosq);   
+  }
+  mosquitto_lib_cleanup();
+
 
   syslog(LOG_INFO, "Shuttercontrol finished.");
   closelog();
