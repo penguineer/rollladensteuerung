@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
+#include <string.h>
 
 #include <time.h>
 #include <syslog.h>
@@ -16,6 +17,11 @@
 
 const char* MQTT_HOST   = "platon";
 const int   MQTT_PORT   = 1883;
+const char* MQTT_TOPIC  = "Netz39/Things/Shuttercontrol/Button/Events";
+
+#define MQTT_MSG_MAXLEN           16
+const char* MQTT_MSG_BTNPRESS   = "button pressed";
+const char* MQTT_MSG_NONE       = "none";
 
 /**
  * Get the milliseconds since epoch.
@@ -359,6 +365,12 @@ int main(int argc, char *argv[]) {
       
     // TODO error handling
   }
+   
+  char mqtt_payload[MQTT_MSG_MAXLEN];
+
+
+  // Store manual mode; start with read-out
+  char old_manual = get_manual_mode();
   
   char run=1;
   int i=0;
@@ -366,12 +378,47 @@ int main(int argc, char *argv[]) {
     printf("****** %u\n", i++);
 
     const char manual = get_manual_mode();
-    printf("Manual mode: %s\n", (manual==1)?"on":"off");
+    printf("Manual mode: %s\n", (manual==MANUAL_MODE_ON)?"on":"off");
     
     if (manual == MANUAL_MODE_ON)
       set_manual_mode_led(LED_PATTERN_ON);
     else
       set_manual_mode_led(LED_PATTERN_OFF);
+   
+    // reset MQTT payload
+    mqtt_payload[0] = 0;
+
+    // if manual mode changed, send MQTT event
+    if (manual != old_manual) {
+      // prepare MQTT payload
+      strcpy(mqtt_payload, MQTT_MSG_BTNPRESS);
+    
+      // store
+      old_manual = manual;
+    }
+ 
+    // send MQTT message if there is payload
+    if (mqtt_payload[0] && mosq) {
+      int ret;
+      int mid;
+      ret = mosquitto_publish(
+                        mosq, 
+                        &mid, 
+                        MQTT_TOPIC,
+                        strlen(mqtt_payload), mqtt_payload,
+                        2, /* qos */
+                        false /* do not retain the event */
+                       );
+      if (ret != MOSQ_ERR_SUCCESS)
+        syslog(LOG_ERR, "MQTT error on message \"%s\": %d (%s)",
+                        mqtt_payload, 
+                        ret,
+                        mosquitto_strerror(ret));
+      else
+        syslog(LOG_INFO, "MQTT message \"%s\" sent with id %d.",
+                         mqtt_payload, mid);
+    }
+
     
     int idx;
     for (idx=1; idx<5; idx++) {
