@@ -380,10 +380,13 @@ int main(int argc, char *argv[]) {
     const char manual = get_manual_mode();
     printf("Manual mode: %s\n", (manual==MANUAL_MODE_ON)?"on":"off");
     
+/*
     if (manual == MANUAL_MODE_ON)
       set_manual_mode_led(LED_PATTERN_ON);
     else
       set_manual_mode_led(LED_PATTERN_OFF);
+*/
+    set_manual_mode_led(LED_PATTERN_OFF);
    
     // reset MQTT payload
     mqtt_payload[0] = 0;
