@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
+#include <string.h>
 
 #include <time.h>
 #include <syslog.h>
@@ -9,8 +10,18 @@
 #include <wiringPi.h>
 #include <wiringPiI2C.h>
 
+#include <mosquitto.h>
+
 #define I2C_ADDR_CONTROLLER 0x21
 #define I2C_ADDR_MANUAL     0x22
+
+const char* MQTT_HOST   = "platon";
+const int   MQTT_PORT   = 1883;
+const char* MQTT_TOPIC  = "Netz39/Things/Shuttercontrol/Button/Events";
+
+#define MQTT_MSG_MAXLEN           16
+const char* MQTT_MSG_BTNPRESS   = "button pressed";
+const char* MQTT_MSG_NONE       = "none";
 
 /**
  * Get the milliseconds since epoch.
@@ -329,6 +340,37 @@ int main(int argc, char *argv[]) {
   set_manual_mode_led(LED_PATTERN_FAST);
   sleep(1);
   set_manual_mode_led(LED_PATTERN_OFF);
+ 
+  // initialize MQTT   
+  mosquitto_lib_init();
+  
+  void *mqtt_obj;
+  struct mosquitto *mosq;
+  mosq = mosquitto_new("shuttercontrol", true, mqtt_obj);
+  if ((int)mosq == ENOMEM) {
+    syslog(LOG_ERR, "Not enough memory to create a new mosquitto session.");
+    mosq = NULL;
+  }
+  if ((int)mosq == EINVAL) {
+    syslog(LOG_ERR, "Invalid values for creating mosquitto session.");
+    return -1;
+  }
+
+  if (mosq) {
+    int ret; 
+    
+    ret = mosquitto_connect(mosq, MQTT_HOST, MQTT_PORT, 30);
+    if (ret == MOSQ_ERR_SUCCESS)
+      syslog(LOG_INFO, "MQTT connection to %s established.", MQTT_HOST);
+      
+    // TODO error handling
+  }
+   
+  char mqtt_payload[MQTT_MSG_MAXLEN];
+
+
+  // Store manual mode; start with read-out
+  char old_manual = get_manual_mode();
   
   char run=1;
   int i=0;
@@ -336,12 +378,50 @@ int main(int argc, char *argv[]) {
     printf("****** %u\n", i++);
 
     const char manual = get_manual_mode();
-    printf("Manual mode: %s\n", (manual==1)?"on":"off");
+    printf("Manual mode: %s\n", (manual==MANUAL_MODE_ON)?"on":"off");
     
+/*
     if (manual == MANUAL_MODE_ON)
       set_manual_mode_led(LED_PATTERN_ON);
     else
       set_manual_mode_led(LED_PATTERN_OFF);
+*/
+    set_manual_mode_led(LED_PATTERN_OFF);
+   
+    // reset MQTT payload
+    mqtt_payload[0] = 0;
+
+    // if manual mode changed, send MQTT event
+    if (manual != old_manual) {
+      // prepare MQTT payload
+      strcpy(mqtt_payload, MQTT_MSG_BTNPRESS);
+    
+      // store
+      old_manual = manual;
+    }
+ 
+    // send MQTT message if there is payload
+    if (mqtt_payload[0] && mosq) {
+      int ret;
+      int mid;
+      ret = mosquitto_publish(
+                        mosq, 
+                        &mid, 
+                        MQTT_TOPIC,
+                        strlen(mqtt_payload), mqtt_payload,
+                        2, /* qos */
+                        false /* do not retain the event */
+                       );
+      if (ret != MOSQ_ERR_SUCCESS)
+        syslog(LOG_ERR, "MQTT error on message \"%s\": %d (%s)",
+                        mqtt_payload, 
+                        ret,
+                        mosquitto_strerror(ret));
+      else
+        syslog(LOG_INFO, "MQTT message \"%s\" sent with id %d.",
+                         mqtt_payload, mid);
+    }
+
     
     int idx;
     for (idx=1; idx<5; idx++) {
@@ -352,11 +432,29 @@ int main(int argc, char *argv[]) {
     }
 
     I3C_reset_manual();
+
+    // call the mosquitto loop to process messages
+    if (mosq) {
+      int ret; 
+      ret = mosquitto_loop(mosq, 100, 1);
+      // if failed, try to reconnect
+      if (ret)
+        mosquitto_reconnect(mosq);
+    }
+
     if (sleep(1)) 
       break;
   }
 
   stop_all_shutters();
+
+  // clean-up MQTT
+  if (mosq) {
+    mosquitto_disconnect(mosq);
+    mosquitto_destroy(mosq);   
+  }
+  mosquitto_lib_cleanup();
+
 
   syslog(LOG_INFO, "Shuttercontrol finished.");
   closelog();
