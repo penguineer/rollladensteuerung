@@ -20,12 +20,15 @@
 const char* MQTT_HOST 	= "platon";
 const int   MQTT_PORT 	= 1883;
 const char* MQTT_TOPIC 	= "Netz39/Things/Door/Events";
+const char* MQTT_TOPIC_BTN = "Netz39/Things/Door/Button/Events";
 
 #define MQTT_MSG_MAXLEN		  16
 const char* MQTT_MSG_DOOROPEN   = "door open";
 const char* MQTT_MSG_DOORCLOSE  = "door closed";
 const char* MQTT_MSG_LOCKOPEN   = "door unlocked";
 const char* MQTT_MSG_LOCKCLOSE  = "door locked";
+const char* MQTT_MSG_BTNGREEN   = "button green";
+const char* MQTT_MSG_BTNRED     = "button red";
 const char* MQTT_MSG_NONE	= "none";
 
 struct door_status_t {
@@ -287,29 +290,40 @@ int main(int argc, char *argv[]) {
       
       before.lock_open = ds.lock_open;
     }
+
+    // send MQTT messages if there is payload
+    mqtt_send(mosq, mqtt_payload, MQTT_TOPIC);
+    mqtt_payload[0] = 0;
     
-    // send MQTT message if there is payload
-    if (mqtt_payload[0] && mosq) {
-      int ret;
-      int mid;
-      ret = mosquitto_publish(
-                        mosq, 
-                        &mid,
-                        MQTT_TOPIC,
-                        strlen(mqtt_payload), mqtt_payload,
-                        2, /* qos */
-                        true /* retain */
-                       );
-      if (ret != MOSQ_ERR_SUCCESS)
-        syslog(LOG_ERR, "MQTT error on message \"%s\": %d (%s)", 
-                        mqtt_payload, 
-                        ret,
-                        mosquitto_strerror(ret));
-      else
-        syslog(LOG_INFO, "MQTT message \"%s\" sent with id %d.", 
-                         mqtt_payload, mid);
+    // green button status changed
+    if (before.green_active != ds.green_active) {
+      if (ds.green_active) {
+        syslog(LOG_INFO, "Green button active.");
+        //MQTT message
+        strcpy(mqtt_payload, MQTT_MSG_BTNGREEN);
+      }
+      // only button activation is an event
+      before.green_active = ds.green_active;
     }
-    
+
+    // send MQTT messages if there is payload
+    mqtt_send(mosq, mqtt_payload, MQTT_TOPIC_BTN);
+    mqtt_payload[0] = 0;
+
+    // red button status changed
+    if (before.red_active != ds.red_active) {
+      if (ds.red_active) {
+        syslog(LOG_INFO, "Red button active.");
+        //MQTT message
+        strcpy(mqtt_payload, MQTT_MSG_BTNRED);
+      }
+      // only button activation is an event
+      before.red_active = ds.red_active;
+    }
+
+    // send MQTT messages if there is payload
+    mqtt_send(mosq, mqtt_payload, MQTT_TOPIC_BTN);
+
     // call the mosquitto loop to process messages
     if (mosq) {
       int ret;
