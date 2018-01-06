@@ -171,6 +171,33 @@ void decode_door_status(uint8_t status,
   ds->force_open   = (status & 0x01);
 }
 
+void mqtt_send(struct mosquitto* mosq,
+               const char* mqtt_payload,
+               const char* mqtt_topic)
+{
+    // send MQTT message if there is payload
+    if (mqtt_payload[0] && mosq) {
+      int ret;
+      int mid;
+      ret = mosquitto_publish(
+                        mosq,
+                        &mid,
+                        mqtt_topic,
+                        strlen(mqtt_payload), mqtt_payload,
+                        2, /* qos */
+                        true /* retain */
+                       );
+      if (ret != MOSQ_ERR_SUCCESS)
+        syslog(LOG_ERR, "MQTT error on message \"%s\": %d (%s)",
+                        mqtt_payload,
+                        ret,
+                        mosquitto_strerror(ret));
+      else
+        syslog(LOG_INFO, "MQTT message \"%s\" sent with id %d.",
+                         mqtt_payload, mid);
+    }
+}
+
 int main(int argc, char *argv[]) {
   // initialize the system logging
   openlog("doorstate", LOG_CONS | LOG_PID, LOG_USER);
