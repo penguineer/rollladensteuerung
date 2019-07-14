@@ -19,6 +19,7 @@ MQTT_MSG_BTNGREEN = "button green"
 MQTT_MSG_BTNRED = "button red"
 MQTT_MSG_NONE = "none"
 
+
 def mqtt_add_topic_callback(mqttclient, topic, cb):
     MQTT_TOPICS[topic] = cb
 
@@ -103,8 +104,28 @@ class I2cObserver:
         return None
 
 
-def callback(_state, new_state):
-    print(new_state)
+class MqttAnnouncer:
+    def __init__(self, mqttclient, topic_base):
+        self.mqttclient = mqttclient
+        self.topic_base = topic_base
+
+    def callback(self, _state, new_state):
+        for k in new_state.keys():
+            if k == 'green_active' and new_state[k]:
+                self._mqtt_send('Button/Events', MQTT_MSG_BTNGREEN)
+            if k == 'red_active' and new_state[k]:
+                self._mqtt_send('Button/Events', MQTT_MSG_BTNRED)
+
+            if k == 'door_closed':
+                self._mqtt_send('Events', MQTT_MSG_DOORCLOSE if new_state[k] else MQTT_MSG_DOOROPEN)
+            if k == 'lock_open':
+                self._mqtt_send('Events', MQTT_MSG_LOCKOPEN if new_state[k] else MQTT_MSG_LOCKCLOSE)
+
+        print(new_state)
+
+    def _mqtt_send(self, topic_apx, msg):
+        topic = "{0}/{1}".format(self.topic_base, topic_apx)
+        self.mqttclient.publish(topic, msg, qos=2, retain=False)
 
 
 def main():
@@ -112,7 +133,7 @@ def main():
         description="Gatekeeper Door Service")
     parser.add_argument("--mqtthost", help="MQTT host", default="localhost")
     parser.add_argument("--mqttport", help="MQTT port", default=1883)
-    parser.add_argument("--topic", help="MQTT topic prefix", default="Things/Door")
+    parser.add_argument("--topic", help="MQTT topic prefix", default="Netz39/Things/Door")
     parser.add_argument("--i2c", help="I2C device address for the door controller", default=0x23)
     args = parser.parse_args()
 
@@ -121,7 +142,9 @@ def main():
     mqttclient.connect(args.mqtthost, args.mqttport, 60)
     mqttclient.loop_start()
 
-    obs = I2cObserver(args.i2c, callback)
+    mqtta = MqttAnnouncer(mqttclient, args.topic)
+
+    obs = I2cObserver(args.i2c, mqtta.callback)
     obs.loop()
 
     mqttclient.loop_stop()
