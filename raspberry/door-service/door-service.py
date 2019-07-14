@@ -6,6 +6,8 @@ import time
 
 import argparse
 
+import syslog
+
 import paho.mqtt.client as mqtt
 import smbus
 
@@ -28,14 +30,14 @@ def mqtt_add_topic_callback(mqttclient, topic, cb):
 
 
 def on_mqtt_connect(client, _userdata, _flags, rc):
-    print("MQTT connected with code %s" % rc)
+    syslog.syslog(syslog.LOG_INFO, "MQTT connected with code {}".format(rc))
     for topic, cb in MQTT_TOPICS.items():
         client.subscribe(topic)
         client.message_callback_add(topic, cb)
 
 
 def sigint_handler(_signal, _frame):
-    print("SIGINT received. Exit.")
+    syslog.syslog(syslog.LOG_INFO, "SIGINT received. Exit.")
     sys.exit(0)
 
 
@@ -98,7 +100,7 @@ class I2cObserver:
                 if data[0] == (data[1] ^ 0xff):
                     return data[0]
             except OSError as e:
-                print("OS error on I2C receive {}".format(str(e)))
+                syslog.syslog(syslog.LOG_WARNING, "OS error on I2C receive {}".format(str(e)))
             hops = hops-1
 
         return None
@@ -112,16 +114,18 @@ class MqttAnnouncer:
     def callback(self, _state, new_state):
         for k in new_state.keys():
             if k == 'green_active' and new_state[k]:
+                syslog.syslog(syslog.LOG_INFO, "Green button active.")
                 self._mqtt_send('Button/Events', MQTT_MSG_BTNGREEN)
             if k == 'red_active' and new_state[k]:
+                syslog.syslog(syslog.LOG_INFO, "Red button active.")
                 self._mqtt_send('Button/Events', MQTT_MSG_BTNRED)
 
             if k == 'door_closed':
+                syslog.syslog(syslog.LOG_INFO, "Door has been {}.".format("closed" if new_state[k] else "opened"))
                 self._mqtt_send('Events', MQTT_MSG_DOORCLOSE if new_state[k] else MQTT_MSG_DOOROPEN)
             if k == 'lock_open':
+                syslog.syslog(syslog.LOG_INFO, "Lock has been {}.".format("unlocked" if new_state[k] else "locked"))
                 self._mqtt_send('Events', MQTT_MSG_LOCKOPEN if new_state[k] else MQTT_MSG_LOCKCLOSE)
-
-        print(new_state)
 
     def _mqtt_send(self, topic_apx, msg):
         topic = "{0}/{1}".format(self.topic_base, topic_apx)
@@ -145,8 +149,10 @@ class CommandHandler:
         cmd = message.payload.decode("utf-8")
 
         if cmd == 'door open':
+            syslog.syslog(syslog.LOG_INFO, "Unlocking the door via MQTT.")
             self._open()
         if cmd == 'door close':
+            syslog.syslog(syslog.LOG_INFO, "Locking the door via MQTT.")
             self._close()
 
     def _open(self):
@@ -163,7 +169,7 @@ class CommandHandler:
                 if res == 0x01:
                     break
             except OSError as e:
-                print("OS error on I2C receive {}".format(str(e)))
+                syslog.syslog(syslog.LOG_WARNING, "OS error on I2C receive {}".format(str(e)))
             hops = hops-1
 
 
@@ -175,6 +181,9 @@ def main():
     parser.add_argument("--topic", help="MQTT topic prefix", default="Netz39/Things/Door")
     parser.add_argument("--i2c", help="I2C device address for the door controller", default=0x23)
     args = parser.parse_args()
+
+    syslog.openlog("doorservice", syslog.LOG_CONS | syslog.LOG_PID, syslog.LOG_USER)
+    syslog.syslog(syslog.LOG_INFO, "Starting doorstate observer.")
 
     mqttclient = mqtt.Client()
     mqttclient.on_connect = on_mqtt_connect
@@ -189,6 +198,9 @@ def main():
     obs.loop()
 
     mqttclient.loop_stop()
+
+    syslog.syslog(syslog.LOG_INFO, "Doorstate observer finished.")
+    syslog.closelog()
 
 
 if __name__ == "__main__":
