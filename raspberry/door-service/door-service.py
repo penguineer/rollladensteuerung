@@ -128,6 +128,45 @@ class MqttAnnouncer:
         self.mqttclient.publish(topic, msg, qos=2, retain=False)
 
 
+class CommandHandler:
+    def __init__(self, device, mqttclient, topic_base):
+        self.device = device
+        self.mqttclient = mqttclient
+        self.topic_base = topic_base
+
+        self.run = True
+
+        self.bus = smbus.SMBus(1)
+
+        topic = "{0}/{1}".format(self.topic_base, 'Command')
+        mqtt_add_topic_callback(self.mqttclient, topic, self.callback)
+
+    def callback(self, _client, _userdata, message):
+        cmd = message.payload.decode("utf-8")
+
+        if cmd == 'door open':
+            self._open()
+        if cmd == 'door close':
+            self._close()
+
+    def _open(self):
+        self._i2c_send(0x90)
+
+    def _close(self):
+        self._i2c_send(0xa0)
+
+    def _i2c_send(self, data):
+        hops = 10
+        while hops:
+            try:
+                res = self.bus.read_byte_data(self.device, data)
+                if res == 0x01:
+                    break
+            except OSError as e:
+                print("OS error on I2C receive {}".format(str(e)))
+            hops = hops-1
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Gatekeeper Door Service")
@@ -141,6 +180,8 @@ def main():
     mqttclient.on_connect = on_mqtt_connect
     mqttclient.connect(args.mqtthost, args.mqttport, 60)
     mqttclient.loop_start()
+
+    ch = CommandHandler(args.i2c, mqttclient, args.topic)
 
     mqtta = MqttAnnouncer(mqttclient, args.topic)
 
