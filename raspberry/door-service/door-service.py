@@ -60,6 +60,7 @@ class I2cObserver:
             state = self._get_state()
 
             if state is None:
+                time.sleep(0.5)
                 continue
 
             new_state = dict()
@@ -102,6 +103,7 @@ class I2cObserver:
             except OSError as e:
                 syslog.syslog(syslog.LOG_WARNING, "OS error on I2C receive {}".format(str(e)))
             hops = hops-1
+            time.sleep(0.5)
 
         return None
 
@@ -171,6 +173,7 @@ class CommandHandler:
             except OSError as e:
                 syslog.syslog(syslog.LOG_WARNING, "OS error on I2C receive {}".format(str(e)))
             hops = hops-1
+            time.sleep(0.5)
 
 
 def main():
