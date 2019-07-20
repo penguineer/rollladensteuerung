@@ -21,6 +21,8 @@ MQTT_MSG_BTNGREEN = "button green"
 MQTT_MSG_BTNRED = "button red"
 MQTT_MSG_NONE = "none"
 
+MQTT_CMD_OPEN = "door open"
+MQTT_CMD_CLOSE = "door close"
 
 def mqtt_add_topic_callback(mqttclient, topic, cb):
     MQTT_TOPICS[topic] = cb
@@ -152,10 +154,10 @@ class CommandHandler:
     def callback(self, _client, _userdata, message):
         cmd = message.payload.decode("utf-8")
 
-        if cmd == 'door open':
+        if cmd == MQTT_CMD_OPEN:
             syslog.syslog(syslog.LOG_INFO, "Unlocking the door via MQTT.")
             self._open()
-        if cmd == 'door close':
+        if cmd == MQTT_CMD_CLOSE:
             syslog.syslog(syslog.LOG_INFO, "Locking the door via MQTT.")
             self._close()
 
