@@ -98,7 +98,9 @@ class I2cObserver:
             try:
                 d = self.bus.read_word_data(self.address, 0x30)
                 data = [d & 0xff, (d & 0xff00) >> 8]
-                if data[0] == (data[1] ^ 0xff):
+                # data is valid if first byte is binary inversion of second byte
+                # and result is not zero
+                if data[0] == (data[1] ^ 0xff) and data[0] != 0:
                     return data[0]
             except OSError as e:
                 syslog.syslog(syslog.LOG_WARNING, "OS error on I2C receive {}".format(str(e)))
