@@ -40,8 +40,13 @@ def on_mqtt_connect(client, _userdata, _flags, rc):
 
 
 def sigint_handler(_signal, _frame):
-    syslog.syslog(syslog.LOG_INFO, "SIGINT received. Exit.")
-    sys.exit(0)
+    global RUN
+    if RUN:
+        syslog.syslog(syslog.LOG_INFO, "SIGINT received, breaking run loop.")
+        RUN = False
+    else:
+        syslog.syslog(syslog.LOG_INFO, "SIGINT received after breaking run loop, exiting.")
+        sys.exit(0)
 
 
 class MqttObserver:
@@ -354,9 +359,12 @@ def main():
     # add some code here
     watchdog = WatchDog(mqttclient, args.topicstate, args.topicdoor)
 
+    global RUN
+    RUN = True
+
     # this can become an async timer loop issued by the watchdog
     # when Python 3.7 is available
-    while True:
+    while RUN:
         watchdog.countdown_step()
         time.sleep(0.5)
 
