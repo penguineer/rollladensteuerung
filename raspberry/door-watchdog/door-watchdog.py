@@ -1,8 +1,11 @@
 #!/usr/bin/python3
 
+from enum import Enum
+
 import signal
 import sys
 import time
+import threading
 
 import argparse
 
@@ -169,6 +172,166 @@ class LockActor:
         topic = LockActor._render_topic(self.topic_base, 'Command')
 
         self.mqttclient.publish(topic, cmd, qos=2, retain=False)
+
+
+class WatchDog:
+    """
+    States:
+        BOOT - Find out about Space and Lock state
+        OPEN - Space is open
+        COUNTDOWN - In countdown for closing
+        CLOSE - Locking the space
+        LOCKED - Space is locked
+    """
+    class WDStates(Enum):
+        BOOT = 1
+        OPEN = 2
+        COUNTDOWN = 3
+        LOCKED = 4
+
+    def __init__(self, mqttclient, status_topic_base, door_topic_base):
+        self.mqttclient = mqttclient
+        self.status_topic_base = status_topic_base
+        self.door_topic_base = door_topic_base
+        self.countdown_duration_s = 30
+
+        # start with the BOOT state
+        self.current_state = self.WDStates.BOOT
+
+        # these are created here to get to correct trampolines
+        self.state_handlers = {
+            self.WDStates.BOOT: self._step_boot,
+            self.WDStates.OPEN: self._step_open,
+            self.WDStates.COUNTDOWN: self._step_countdown,
+            self.WDStates.LOCKED: self._step_locked
+        }
+
+        self.countdown_target = None
+        self.nextlock_target = None
+
+        self.locked = None
+        self.is_open = None
+
+        self.status_obs = SpaceStatusObserver(self.mqttclient, self.status_topic_base, self._status_callback)
+        self.lock_obs = LockObserver(self.mqttclient, self.door_topic_base, self._lock_callback)
+        self.lock_ac = LockActor(self.mqttclient, self.door_topic_base)
+
+        # get a re-entrant lock for the Watchdog
+        self.wd_lock = threading.RLock()
+
+    def _status_callback(self, status):
+        with self.wd_lock:
+            self.is_open = status
+
+            self.step()
+
+    def _lock_callback(self, locked):
+        with self.wd_lock:
+            self.locked = locked
+
+            self.step()
+
+    def step(self):
+        """Do the next step in the state machine, if applicable"""
+        with self.wd_lock:
+            if self.current_state in self.state_handlers.keys():
+                handler = self.state_handlers.get(self.current_state)
+                if handler is not None:
+                    handler()
+
+    def countdown_step(self):
+        """Like step, but only if in COUNTDOWN state"""
+        with self.wd_lock:
+            if self.current_state == self.WDStates.COUNTDOWN:
+                self.step()
+
+    def _step_boot(self):
+        with self.wd_lock:
+            assert (self.current_state == self.WDStates.BOOT), "Called BOOT handler when not in BOOT state!"
+
+            # check if we got info about state and lock
+            if (self.locked is not None) and (self.is_open is not None):
+                # check what the next step should be
+                if self.is_open:
+                    self.current_state = self.WDStates.OPEN
+                elif self.locked:
+                    self.current_state = self.WDStates.LOCKED
+                else:
+                    self.current_state = self.WDStates.COUNTDOWN
+
+                syslog.syslog(syslog.LOG_INFO,
+                              "Boot-up information acquired, starting normal operation with status {}."
+                              .format(self.current_state))
+
+    def _step_open(self):
+        with self.wd_lock:
+            assert (self.current_state == self.WDStates.OPEN), "Called OPEN handler when not in OPEN state!"
+
+            # go into countdown when state is closed, but the door is open
+            if not self.is_open and not self.locked:
+                self.current_state = self.WDStates.COUNTDOWN
+                syslog.syslog(syslog.LOG_INFO, "Space state is closed while in door is open, going to COUNTDOWN.")
+
+            # not open, but door is already locked, go to closed
+            if not self.is_open and self.locked:
+                self.current_state = self.WDStates.LOCKED
+                syslog.syslog(syslog.LOG_INFO, "Space state is closed and door is locked, going to LOCKED.")
+
+    def _step_countdown(self):
+        with self.wd_lock:
+            assert (self.current_state == self.WDStates.COUNTDOWN), \
+                "Called COUNTDOWN handler when not in COUNTDOWN state!"
+
+            # abort condition 1:
+            # space is open again
+            if self.is_open:
+                self.current_state = self.WDStates.OPEN
+                syslog.syslog(syslog.LOG_INFO, "Space has been opened during countdown, going to OPEN.")
+
+            # abort condition 2:
+            # door has been locked
+            if not self.is_open and self.locked:
+                self.current_state = self.WDStates.LOCKED
+                syslog.syslog(syslog.LOG_INFO, "Door has been locked, going to LOCKED.")
+
+            # if not in countdown state anymore, reset and return
+            if self.current_state != self.WDStates.COUNTDOWN:
+                # reset countdown
+                self.countdown_target = None
+                return
+
+            # handle the countdown
+            t = int(time.time())
+            if self.countdown_target is None:
+                # setup
+                self.countdown_target = t + self.countdown_duration_s
+
+            elif (t > self.countdown_target) and not self.locked:
+                syslog.syslog(syslog.LOG_INFO,
+                              "Issuing door lock command, countdown continues until door is locked "
+                              "or Space status is open again.")
+
+                # try to lock the door
+                self.lock_ac.lock_door()
+
+                # set new countdown, so locking will be re-tried
+                self.countdown_target = t + 10
+
+                # when successful, abort condition 2 will apply
+
+    def _step_locked(self):
+        with self.wd_lock:
+            assert (self.current_state == self.WDStates.LOCKED), "Called LOCKED handler when not in LOCKED state!"
+
+            # go to OPEN, when the space status is open
+            if self.is_open:
+                self.current_state = self.WDStates.OPEN
+                syslog.syslog(syslog.LOG_INFO, "Space status is open, going to OPEN.")
+
+            # go to countdown, when space status is closed, but door has been opened
+            if not self.is_open and not self.locked:
+                self.current_state = self.WDStates.COUNTDOWN
+                syslog.syslog(syslog.LOG_INFO, "Space state is closed while in door is open, going to COUNTDOWN.")
 
 
 def main():
