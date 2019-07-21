@@ -147,6 +147,30 @@ class LockObserver:
             self.lock_cb(self.locked)
 
 
+class LockActor:
+    """Act on the lock, i.e. lock or unlock."""
+    def __init__(self, mqttclient, topic_base):
+        self.mqttclient = mqttclient
+        self.topic_base = topic_base
+
+    @staticmethod
+    def _render_topic(base, sub):
+        if sub is None or not len(sub):
+            raise ValueError("Sub-topic must be provided!")
+
+        return "{}{}{}".format(base,
+                               "/" if base is not None and len(base) else "",
+                               sub)
+
+    def lock_door(self):
+        self._send_command(MQTT_CMD_CLOSE)
+
+    def _send_command(self, cmd):
+        topic = LockActor._render_topic(self.topic_base, 'Command')
+
+        self.mqttclient.publish(topic, cmd, qos=2, retain=False)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Door Watchdog")
