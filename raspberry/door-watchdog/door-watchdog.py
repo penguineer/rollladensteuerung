@@ -40,6 +40,43 @@ def sigint_handler(_signal, _frame):
     sys.exit(0)
 
 
+class MqttObserver:
+    """
+    Generic MQTT observer for one topic.
+
+    Messages on the topic trigger the callback function: cb(topic, message)
+    """
+    def __init__(self, mqttclient, topic_base, topic_sub, cb):
+        if mqttclient is None:
+            raise ValueError("MQTT client parameter must not be None")
+        self.mqttclient = mqttclient
+
+        self.topic_base = topic_base
+        self.topic_sub = topic_sub
+
+        if cb is None:
+            raise ValueError("Callback must be provided!")
+        self.cb = cb
+
+        mqtt_add_topic_callback(self.mqttclient,
+                                self._render_topic(self.topic_base, self.topic_sub),
+                                self._mqtt_callback)
+
+    @staticmethod
+    def _render_topic(base, sub):
+        if sub is None or not len(sub):
+            raise ValueError("Sub-topic must be provided!")
+
+        return "{}{}{}".format(base,
+                               "/" if base is not None and len(base) else "",
+                               sub)
+
+    def _mqtt_callback(self, _client, _userdata, message):
+        payload = message.payload.decode("utf-8")
+
+        self.cb(message.topic, payload)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Door Watchdog")
