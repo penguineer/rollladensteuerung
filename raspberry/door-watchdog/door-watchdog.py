@@ -352,6 +352,13 @@ def main():
     mqttclient.loop_start()
 
     # add some code here
+    watchdog = WatchDog(mqttclient, args.topicstate, args.topicdoor)
+
+    # this can become an async timer loop issued by the watchdog
+    # when Python 3.7 is available
+    while True:
+        watchdog.countdown_step()
+        time.sleep(0.5)
 
     mqttclient.loop_stop()
 
