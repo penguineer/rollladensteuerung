@@ -77,6 +77,31 @@ class MqttObserver:
         self.cb(message.topic, payload)
 
 
+class SpaceStatusObserver:
+    def __init__(self, mqttclient, topic_base, status_cb):
+        self.mqttclient = mqttclient
+        self.topic_base = topic_base
+
+        if status_cb is None:
+            raise ValueError("Status Callback must be provided!")
+        self.status_cb = status_cb
+
+        self.obs = MqttObserver(self.mqttclient,
+                                self.topic_base,
+                                "isOpen",
+                                self._status_changed)
+
+    def _status_changed(self, _topic, payload):
+        is_open = payload == "true"
+
+        syslog.syslog(syslog.LOG_INFO,
+                      "Observed space status set to {}open.".format(
+                          "" if is_open else "NOT "
+                      ))
+
+        self.status_cb(is_open)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Door Watchdog")
