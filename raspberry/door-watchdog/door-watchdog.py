@@ -10,6 +10,7 @@ import syslog
 
 import paho.mqtt.client as mqtt
 
+MQTT_MSG_DOOROPEN = "door open"
 MQTT_MSG_LOCKOPEN = "door unlocked"
 MQTT_MSG_LOCKCLOSE = "door locked"
 MQTT_MSG_NONE = "none"
@@ -100,6 +101,50 @@ class SpaceStatusObserver:
                       ))
 
         self.status_cb(is_open)
+
+
+class LockObserver:
+    def __init__(self, mqttclient, topic_base, lock_cb):
+        self.mqttclient = mqttclient
+        self.topic_base = topic_base
+
+        # This observer is event based and reacts on the door lock and the open state
+        # (open door means it must be unlocked)
+        self.locked = None
+
+        if lock_cb is None:
+            raise ValueError("Lock Callback must be provided!")
+        self.lock_cb = lock_cb
+
+        self.obs = MqttObserver(self.mqttclient,
+                                self.topic_base,
+                                "Events",
+                                self._status_changed)
+
+    def _status_changed(self, _topic, payload):
+        open_state = ((payload == MQTT_MSG_DOOROPEN) or (payload == MQTT_MSG_LOCKOPEN))
+        close_state = payload == MQTT_MSG_LOCKCLOSE
+
+        assert (not (open_state and close_state)), "Observed open and close state in one message, that's impossible!"
+
+        # exit if we did not observe a relevant state
+        if not open_state and not close_state:
+            return
+
+        new_locked = None
+
+        if open_state and (self.locked is None or self.locked):
+            syslog.syslog(syslog.LOG_INFO, "Door observed as unlocked ({})".format(payload))
+            new_locked = False
+
+        if close_state and (self.locked is None or not self.locked):
+            syslog.syslog(syslog.LOG_INFO, "Door observed as locked ({})".format(payload))
+            new_locked = True
+
+        # if something changed
+        if new_locked is not None and new_locked != self.locked:
+            self.locked = new_locked
+            self.lock_cb(self.locked)
 
 
 def main():
