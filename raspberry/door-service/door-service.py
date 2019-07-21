@@ -105,7 +105,8 @@ class I2cObserver:
                 if data[0] == (data[1] ^ 0xff) and data[0] != 0:
                     return data[0]
             except OSError as e:
-                syslog.syslog(syslog.LOG_WARNING, "OS error on I2C receive {}".format(str(e)))
+                pass
+                # syslog.syslog(syslog.LOG_WARNING, "OS error on I2C receive {}".format(str(e)))
             hops = hops-1
             time.sleep(0.5)
 
