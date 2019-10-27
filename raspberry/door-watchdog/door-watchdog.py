@@ -228,6 +228,7 @@ class WatchDog:
         # beep scheduler and events
         self.beep_sched = scheduler
         self.beep_events = list()
+        self.beep_delay_s = 5
 
     def _status_callback(self, status):
         with self.wd_lock:
@@ -306,6 +307,7 @@ class WatchDog:
             if self.countdown_target is None:
                 # setup
                 self.countdown_target = t + self.countdown_duration_s
+                self._schedule_beep_train(self.countdown_duration_s)
 
             elif (t > self.countdown_target) and not self.locked:
                 syslog.syslog(syslog.LOG_INFO,
@@ -317,6 +319,7 @@ class WatchDog:
 
                 # set new countdown, so locking will be re-tried
                 self.countdown_target = t + 10
+                self._schedule_beep_train(10)
 
                 # when successful, abort condition 2 will apply
 
@@ -343,6 +346,11 @@ class WatchDog:
                     # ignore: event has been removed before
                     pass
             self.beep_events.clear()
+
+    def _schedule_beep_train(self, duration):
+        with self.wd_lock:
+            for delay in range(0, duration, self.beep_delay_s):
+                self._schedule_beep(delay)
 
     def _schedule_beep(self, delay):
         with self.wd_lock:
