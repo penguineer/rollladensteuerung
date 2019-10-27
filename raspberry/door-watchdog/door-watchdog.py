@@ -360,7 +360,10 @@ class WatchDog:
 
     def _do_beep(self):
         if self.current_state == self.WDStates.COUNTDOWN:
-            pass
+            self.mqttclient.publish(topic=self.beep_topic_base,
+                                    payload=0x02,
+                                    qos=2,
+                                    retain=False)
 
 
 def main():
