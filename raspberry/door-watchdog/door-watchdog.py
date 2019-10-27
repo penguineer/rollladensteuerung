@@ -298,6 +298,7 @@ class WatchDog:
             if self.current_state != self.WDStates.COUNTDOWN:
                 # reset countdown
                 self.countdown_target = None
+                self._clear_beeps()
                 return
 
             # handle the countdown
