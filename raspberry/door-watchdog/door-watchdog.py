@@ -6,6 +6,7 @@ import signal
 import sys
 import time
 import threading
+import sched
 
 import argparse
 
@@ -194,7 +195,7 @@ class WatchDog:
         COUNTDOWN = 3
         LOCKED = 4
 
-    def __init__(self, mqttclient, status_topic_base, door_topic_base):
+    def __init__(self, mqttclient, status_topic_base, door_topic_base, scheduler):
         self.mqttclient = mqttclient
         self.status_topic_base = status_topic_base
         self.door_topic_base = door_topic_base
@@ -223,6 +224,10 @@ class WatchDog:
 
         # get a re-entrant lock for the Watchdog
         self.wd_lock = threading.RLock()
+
+        # beep scheduler and events
+        self.beep_sched = scheduler
+        self.beep_events = list()
 
     def _status_callback(self, status):
         with self.wd_lock:
@@ -328,6 +333,25 @@ class WatchDog:
                 self.current_state = self.WDStates.COUNTDOWN
                 syslog.syslog(syslog.LOG_INFO, "Space state is closed while in door is open, going to COUNTDOWN.")
 
+    def _clear_beeps(self):
+        with self.wd_lock:
+            for evt in self.beep_events:
+                try:
+                    self.beep_sched.cancel(evt)
+                except ValueError:
+                    # ignore: event has been removed before
+                    pass
+            self.beep_events.clear()
+
+    def _schedule_beep(self, delay):
+        with self.wd_lock:
+            evt = self.beep_sched.enter(delay, 1, self._do_beep)
+            self.beep_events.append(evt)
+
+    def _do_beep(self):
+        if self.current_state == self.WDStates.COUNTDOWN:
+            pass
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -346,8 +370,11 @@ def main():
     mqttclient.connect(args.mqtthost, args.mqttport, 60)
     mqttclient.loop_start()
 
+    # global scheduler
+    scheduler = sched.scheduler(time.time, time.sleep)
+
     # add some code here
-    watchdog = WatchDog(mqttclient, args.topicstate, args.topicdoor)
+    watchdog = WatchDog(mqttclient, args.topicstate, args.topicdoor, scheduler)
 
     global RUN
     RUN = True
@@ -356,6 +383,7 @@ def main():
     # when Python 3.7 is available
     while RUN:
         watchdog.step()
+        scheduler.run(False)
         time.sleep(0.5)
 
     mqttclient.loop_stop()
