@@ -195,10 +195,11 @@ class WatchDog:
         COUNTDOWN = 3
         LOCKED = 4
 
-    def __init__(self, mqttclient, status_topic_base, door_topic_base, scheduler):
+    def __init__(self, mqttclient, status_topic_base, door_topic_base, beep_topic_base, scheduler):
         self.mqttclient = mqttclient
         self.status_topic_base = status_topic_base
         self.door_topic_base = door_topic_base
+        self.beep_topic_base = beep_topic_base
         self.countdown_duration_s = 30
 
         # start with the BOOT state
@@ -369,6 +370,7 @@ def main():
     parser.add_argument("--mqttport", help="MQTT port", default=1883)
     parser.add_argument("--topicdoor", help="MQTT door topic prefix", default="Netz39/Things/Door")
     parser.add_argument("--topicstate", help="MQTT state topic prefix", default="Netz39/SpaceAPI")
+    parser.add_argument("--topicbeep", help="MQTT beep topic prefix", default="Netz39/Things/Shuttercontrol/Beep")
     args = parser.parse_args()
 
     syslog.openlog("doorwatchdog", syslog.LOG_CONS | syslog.LOG_PID, syslog.LOG_USER)
@@ -383,7 +385,7 @@ def main():
     scheduler = sched.scheduler(time.time, time.sleep)
 
     # add some code here
-    watchdog = WatchDog(mqttclient, args.topicstate, args.topicdoor, scheduler)
+    watchdog = WatchDog(mqttclient, args.topicstate, args.topicdoor, args.topicbeep, scheduler)
 
     global RUN
     RUN = True
