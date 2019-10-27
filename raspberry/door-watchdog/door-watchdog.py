@@ -214,7 +214,7 @@ class WatchDog:
         self.countdown_target = None
         self.nextlock_target = None
 
-        self.locked = None
+        self.locked = False
         self.is_open = None
 
         self.status_obs = SpaceStatusObserver(self.mqttclient, self.status_topic_base, self._status_callback)
