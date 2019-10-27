@@ -228,13 +228,9 @@ class WatchDog:
         with self.wd_lock:
             self.is_open = status
 
-            self.step()
-
     def _lock_callback(self, locked):
         with self.wd_lock:
             self.locked = locked
-
-            self.step()
 
     def step(self):
         """Do the next step in the state machine, if applicable"""
@@ -243,12 +239,6 @@ class WatchDog:
                 handler = self.state_handlers.get(self.current_state)
                 if handler is not None:
                     handler()
-
-    def countdown_step(self):
-        """Like step, but only if in COUNTDOWN state"""
-        with self.wd_lock:
-            if self.current_state == self.WDStates.COUNTDOWN:
-                self.step()
 
     def _step_boot(self):
         with self.wd_lock:
@@ -365,7 +355,7 @@ def main():
     # this can become an async timer loop issued by the watchdog
     # when Python 3.7 is available
     while RUN:
-        watchdog.countdown_step()
+        watchdog.step()
         time.sleep(0.5)
 
     mqttclient.loop_stop()
